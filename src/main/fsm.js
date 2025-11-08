@@ -131,7 +131,12 @@ var directed=true;
 function toggleDirected(){
 	directed=!directed;
 	draw();
-	saveAsLaTeX();
+	if (latex){ //if latex selected, update latex code
+		saveAsLaTeX();
+	}
+	if (svg){ //if svg selected, update svg code
+		saveAsSVG();
+	}
 }
 function draw() {
 	drawUsing(canvas.getContext('2d'));
@@ -382,8 +387,11 @@ function saveAsPNG() {
 	var pngData = canvas.toDataURL('image/png');
 	document.location.href = pngData;
 }
-
+var svg=false;
+var latex=false;
 function saveAsSVG() {
+	latex=false;
+	svg=true;
 	var exporter = new ExportAsSVG();
 	var oldSelectedObject = selectedObject;
 	selectedObject = null;
@@ -394,8 +402,9 @@ function saveAsSVG() {
 	// Chrome isn't ready for this yet, the 'Save As' menu item is disabled
 	// document.location.href = 'data:image/svg+xml;base64,' + btoa(svgData);
 }
-
 function saveAsLaTeX() {
+	svg=false;
+	latex=true;
 	var exporter = new ExportAsLaTeX();
 	var oldSelectedObject = selectedObject;
 	selectedObject = null;
