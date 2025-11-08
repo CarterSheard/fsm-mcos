@@ -131,6 +131,7 @@ var directed=true;
 function toggleDirected(){
 	directed=!directed;
 	draw();
+	saveAsLaTeX();
 }
 function draw() {
 	drawUsing(canvas.getContext('2d'));
