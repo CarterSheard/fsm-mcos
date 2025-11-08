@@ -374,9 +374,15 @@ function crossBrowserRelativeMousePos(e) {
 }
 
 function output(text) {
-	var element = document.getElementById('output');
-	element.style.display = 'block';
-	element.value = text;
+	var element = document.getElementById('output');                                              
+    element.style.display = 'block';                                                              
+    element.value = text;  
+	var container = document.getElementById('outputContainer');
+	container.style.display = 'block';
+	var textarea = document.getElementById('output');
+	textarea.value = text;
+	var copyButton = document.getElementById('copyButton');
+	copyButton.textContent = 'Copy';
 }
 
 function saveAsPNG() {
@@ -412,4 +418,23 @@ function saveAsLaTeX() {
 	selectedObject = oldSelectedObject;
 	var texData = exporter.toLaTeX();
 	output(texData);
+}
+
+function copyOutput() {
+	var textarea = document.getElementById('output');
+	var copyButton = document.getElementById('copyButton');
+
+	navigator.clipboard.writeText(textarea.value).then(function() {
+		// Success feedback
+		copyButton.textContent = 'Copied!';
+		setTimeout(function() {
+			copyButton.textContent = 'Copy';
+		}, 2000); // Revert after 2 seconds
+	}, function(err) {
+		copyButton.textContent = 'Failed to copy';
+		console.error('Could not copy text: ', err);
+		setTimeout(function() {
+			copyButton.textContent = 'Copy';
+		}, 2000);
+	});
 }

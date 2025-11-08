@@ -51,13 +51,6 @@ p {
 	text-align: center;
 }
 
-textarea {
-	display: none;
-	width: 75%;
-	height: 400px;
-	margin: 0 auto;
-}
-
 /* === Modern Toggle Switch CSS === */
 
 /* Container for the switch and label text */
@@ -153,6 +146,27 @@ textarea {
     /* Align to end */
     justify-self: end;
 }
+
+/* === Style for the Copy Button === */
+#copyButton {
+    background-color: #2196F3; /* Blue to match the toggle switch */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px; /* Space between button and textarea */
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* Darker blue on hover for feedback */
+#copyButton:hover {
+    background-color: #1976D2;
+}
+
+
   </style>
 	<script src="fsm.js"></script>
 	<script>
@@ -204,7 +218,10 @@ if (typeof btoa == 'undefined') {
 				<label for="directedLinksCheckbox">Directed Links</label>
 			</div>
 		</div>
-		<textarea id="output"></textarea>
+		<div id="outputContainer" style="display: none; text-align: center;">
+			<button id="copyButton" onclick="copyOutput()">Copy</button>
+			<textarea id="output" style="width: 75%; height: 400px; margin: 0 auto; display: block;"></textarea>
+		</div>
 		<p>The big white box above is the FSM designer.&nbsp; Here's how to use it:</p>
 		<ul>
 			<li><b>Add a state:</b> double-click on the canvas</li>
