@@ -67,12 +67,15 @@ function ExportAsLaTeX() {
 	};
 	this.fill = function() {
 		if(this._points.length == 0) return;
+		if (directed){
 		this._texData += '\\fill [' + this.strokeStyle + ']';
 		for(var i = 0; i < this._points.length; i++) {
 			var p = this._points[i];
 			this._texData += (i > 0 ? ' --' : '') + ' (' + fixed(p.x, 2) + ',' + fixed(-p.y, 2) + ')';
 		}
+
 		this._texData += ';\n';
+		}
 	};
 	this.measureText = function(text) {
 		var c = canvas.getContext('2d');

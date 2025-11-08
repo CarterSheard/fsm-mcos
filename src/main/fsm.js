@@ -35,8 +35,10 @@ function drawArrow(c, x, y, angle) {
 	var dy = Math.sin(angle);
 	c.beginPath();
 	c.moveTo(x, y);
+	if (directed){
 	c.lineTo(x - 8 * dx + 5 * dy, y - 8 * dy - 5 * dx);
 	c.lineTo(x - 8 * dx - 5 * dy, y - 8 * dy + 5 * dx);
+	}
 	c.fill();
 }
 
@@ -125,7 +127,11 @@ function drawUsing(c) {
 
 	c.restore();
 }
-
+var directed=true;
+function toggleDirected(){
+	directed=!directed;
+	draw();
+}
 function draw() {
 	drawUsing(canvas.getContext('2d'));
 	saveBackup();

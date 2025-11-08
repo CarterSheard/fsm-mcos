@@ -58,6 +58,101 @@ textarea {
 	margin: 0 auto;
 }
 
+/* === Modern Toggle Switch CSS === */
+
+/* Container for the switch and label text */
+.toggle-switch {
+    display: inline-flex; /* Use flexbox for alignment */
+    align-items: center;   /* Vertically center the items */
+    font-size: 16px;       /* Adjust font size as needed */
+}
+
+/* Style for the label text ("Directed Links") */
+.toggle-switch label {
+    margin-left: 12px; /* Space between the switch and the text */
+    cursor: pointer;
+}
+
+/* Hide the default checkbox but keep it functional */
+.toggle-switch input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+/* Style the label to look like the switch track */
+.toggle-switch input[type="checkbox"] + label::before {
+    content: '';
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+    width: 40px;
+    height: 22px;
+    background-color: #ccc; /* "Off" state color */
+    border-radius: 11px;    /* Makes it pill-shaped */
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* Style the movable circle (the thumb) */
+.toggle-switch input[type="checkbox"] + label::after {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-color: white;
+    border-radius: 50%; /* Makes it a circle */
+    position: absolute;
+    left: 2px; /* Position for the "Off" state */
+    top: 2px;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+}
+
+/* --- "On" State Styles --- */
+
+/* When the hidden checkbox is checked, change the track's background */
+.toggle-switch input[type="checkbox"]:checked + label::before {
+    background-color: #2196F3; /* A nice blue for the "On" state */
+}
+
+/* When the hidden checkbox is checked, slide the thumb to the right */
+.toggle-switch input[type="checkbox"]:checked + label::after {
+    transform: translateX(18px);
+}
+.export-options p,
+.export-options .toggle-switch {
+    display: inline-block;
+    vertical-align: middle; /* Ensures elements are vertically aligned with each other */
+}
+
+/* Optional: Add a little space between the two elements */
+.export-options p {
+    margin-right: 20px;
+}
+.export-options {
+    display: grid;
+    /* 3 columns: 1fr, auto, 1fr for centering */
+    grid-template-columns: 1fr auto 1fr;
+    /* Vertically center items */
+    align-items: center;
+    /* Full width */
+    width: 100%;
+    box-sizing: border-box;
+}
+.export-options p {
+    /* Center column for links */
+    grid-column: 2;
+    margin: 0; /* Remove default <p> margin */
+}
+.export-options .toggle-switch {
+    /* Right column for checkbox */
+    grid-column: 3;
+    /* Align to end */
+    justify-self: end;
+}
   </style>
 	<script src="fsm.js"></script>
 	<script>
@@ -102,7 +197,13 @@ if (typeof btoa == 'undefined') {
 		<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
 	</canvas>
 	<div>
-		<p class="center">Export as: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
+		<div class="export-options">
+			<p class="center">Export as: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
+			<div class="toggle-switch">
+				<input type="checkbox" id="directedLinksCheckbox" onchange="toggleDirected()" checked>
+				<label for="directedLinksCheckbox">Directed Links</label>
+			</div>
+		</div>
 		<textarea id="output"></textarea>
 		<p>The big white box above is the FSM designer.&nbsp; Here's how to use it:</p>
 		<ul>
