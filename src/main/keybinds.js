@@ -290,6 +290,15 @@ function handleKeyDown(e) {
         return false;
     }
     
+    // Ctrl+T - Compute Minimum Spanning Tree
+    if (ctrl && key == 84 && !shiftKey) {
+        e.preventDefault();
+        if (typeof applyMST === 'function') {
+            applyMST();
+        }
+        return false;
+    }
+    
     // Arrow keys with Shift - Move selected node
     if (shiftKey && selectedObject instanceof Node) {
         var moved = false;
