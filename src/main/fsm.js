@@ -137,6 +137,8 @@ function toggleDirected(){
 	if (svg){ //if svg selected, update svg code
 		saveAsSVG();
 	}
+	// Save the directed state
+	saveBackup();
 }
 function draw() {
 	drawUsing(canvas.getContext('2d'));
@@ -175,6 +177,11 @@ window.onload = function() {
 	canvas = document.getElementById('canvas');
 	restoreBackup();
 	draw();
+	
+	// Initialize keybind system
+	if (typeof initKeybinds === 'function') {
+		initKeybinds();
+	}
 
 	canvas.onmousedown = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
@@ -277,6 +284,7 @@ window.onload = function() {
 
 var shift = false;
 
+// Legacy keyboard handlers - replaced by keybinds.js but kept as fallback
 document.onkeydown = function(e) {
 	var key = crossBrowserKey(e);
 

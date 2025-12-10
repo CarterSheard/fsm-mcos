@@ -5,7 +5,12 @@ function restoreBackup() {
 
 	try {
 		var backup = JSON.parse(localStorage['fsm']);
-
+		
+		// Restore directed state
+		if(backup.hasOwnProperty('directed')) {
+			directed = backup.directed;
+		}
+		
 		for(var i = 0; i < backup.nodes.length; i++) {
 			var backupNode = backup.nodes[i];
 			var node = new Node(backupNode.x, backupNode.y);
@@ -49,6 +54,7 @@ function saveBackup() {
 	var backup = {
 		'nodes': [],
 		'links': [],
+		'directed': directed,
 	};
 	for(var i = 0; i < nodes.length; i++) {
 		var node = nodes[i];

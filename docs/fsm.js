@@ -372,6 +372,217 @@ TemporaryLink.prototype.draw = function(c) {
 	drawArrow(c, this.to.x, this.to.y, Math.atan2(this.to.y - this.from.y, this.to.x - this.from.x));
 };
 
+// Adjacency Matrix and List Export for FSM Designer
+// Generates LaTeX representations of graph adjacency
+
+// Generate node labels with fallback to indices
+function generateNodeLabels() {
+	var labels = [];
+	var usedLabels = new Set();
+	
+	// First pass: use existing text labels
+	for (var i = 0; i < nodes.length; i++) {
+		var node = nodes[i];
+		if (node.text && node.text.trim() !== '') {
+			labels.push(node.text.trim());
+			usedLabels.add(node.text.trim());
+		} else {
+			labels.push(null); // Mark for fallback
+		}
+	}
+	
+	// Second pass: fill in fallbacks with indices
+	var counter = 0;
+	for (var i = 0; i < labels.length; i++) {
+		if (labels[i] === null) {
+			var fallbackLabel;
+			do {
+				fallbackLabel = 'q' + counter;
+				counter++;
+			} while (usedLabels.has(fallbackLabel));
+			
+			labels[i] = fallbackLabel;
+			usedLabels.add(fallbackLabel);
+		}
+	}
+	
+	return labels;
+}
+
+// Escape LaTeX special characters
+function escapeLaTeX(text) {
+	if (!text) return '';
+	return text
+		.replace(/\\/g, '\\textbackslash{}')
+		.replace(/&/g, '\\&')
+		.replace(/%/g, '\\%')
+		.replace(/\$/g, '\\$')
+		.replace(/#/g, '\\#')
+		.replace(/_/g, '\\_')
+		.replace(/{/g, '\\{')
+		.replace(/}/g, '\\}')
+		.replace(/~/g, '\\textasciitilde{}')
+		.replace(/\^/g, '\\textasciicircum{}');
+}
+
+// Generate adjacency matrix data structure with edge counts
+function buildAdjacencyMatrix(labels) {
+	var n = nodes.length;
+	var matrix = [];
+	
+	// Initialize matrix with zeros
+	for (var i = 0; i < n; i++) {
+		matrix[i] = [];
+		for (var j = 0; j < n; j++) {
+			matrix[i][j] = 0;
+		}
+	}
+	
+	// Populate matrix from links - count edges
+	for (var i = 0; i < links.length; i++) {
+		var link = links[i];
+		
+		if (link instanceof Link) {
+			var nodeAIndex = nodes.indexOf(link.nodeA);
+			var nodeBIndex = nodes.indexOf(link.nodeB);
+			
+			if (nodeAIndex >= 0 && nodeBIndex >= 0) {
+				// For directed: A->B means row A, column B
+				matrix[nodeAIndex][nodeBIndex]++;
+				
+				// For undirected graphs, add reverse direction
+				if (!directed) {
+					matrix[nodeBIndex][nodeAIndex]++;
+				}
+			}
+		} else if (link instanceof SelfLink) {
+			var nodeIndex = nodes.indexOf(link.node);
+			
+			if (nodeIndex >= 0) {
+				matrix[nodeIndex][nodeIndex]++;
+			}
+		}
+		// StartLink is ignored - it's not an edge between nodes
+	}
+	
+	return matrix;
+}
+
+// Generate adjacency list data structure
+function buildAdjacencyList(labels) {
+	var adjacency = {};
+	
+	// Initialize adjacency list for all nodes
+	for (var i = 0; i < labels.length; i++) {
+		adjacency[labels[i]] = [];
+	}
+	
+	// Populate adjacency list from links
+	for (var i = 0; i < links.length; i++) {
+		var link = links[i];
+		
+		if (link instanceof Link) {
+			var nodeAIndex = nodes.indexOf(link.nodeA);
+			var nodeBIndex = nodes.indexOf(link.nodeB);
+			
+			if (nodeAIndex >= 0 && nodeBIndex >= 0) {
+				adjacency[labels[nodeAIndex]].push({
+					node: labels[nodeBIndex]
+				});
+				
+				// For undirected graphs, add reverse direction
+				if (!directed) {
+					adjacency[labels[nodeBIndex]].push({
+						node: labels[nodeAIndex]
+					});
+				}
+			}
+		} else if (link instanceof SelfLink) {
+			var nodeIndex = nodes.indexOf(link.node);
+			
+			if (nodeIndex >= 0) {
+				adjacency[labels[nodeIndex]].push({
+					node: labels[nodeIndex]
+				});
+			}
+		}
+	}
+	
+	return adjacency;
+}
+
+// Generate LaTeX for adjacency matrix (just the tabular, no document wrapper)
+function generateAdjacencyMatrix() {
+	if (nodes.length === 0) {
+		return '% No nodes in the graph to export.';
+	}
+	
+	var labels = generateNodeLabels();
+	var matrix = buildAdjacencyMatrix(labels);
+	var n = nodes.length;
+	
+	var latex = '\\begin{center}\n';
+	latex += '\\begin{tabular}{c|' + 'c'.repeat(n) + '}\n';
+	
+	// Header row
+	latex += '  ';
+	for (var j = 0; j < n; j++) {
+		latex += ' & $' + escapeLaTeX(labels[j]) + '$';
+	}
+	latex += ' \\\\\n';
+	latex += '\\hline\n';
+	
+	// Data rows
+	for (var i = 0; i < n; i++) {
+		latex += '$' + escapeLaTeX(labels[i]) + '$';
+		for (var j = 0; j < n; j++) {
+			latex += ' & $' + matrix[i][j] + '$';
+		}
+		latex += ' \\\\\n';
+	}
+	
+	latex += '\\end{tabular}\n';
+	latex += '\\end{center}\n';
+	
+	return latex;
+}
+
+// Generate LaTeX for adjacency list (just the itemize, no document wrapper)
+function generateAdjacencyList() {
+	if (nodes.length === 0) {
+		return '% No nodes in the graph to export.';
+	}
+	
+	var labels = generateNodeLabels();
+	var adjacency = buildAdjacencyList(labels);
+	
+	var latex = '\\begin{itemize}\n';
+	
+	// Generate list entries
+	for (var i = 0; i < labels.length; i++) {
+		var label = labels[i];
+		var connections = adjacency[label];
+		
+		latex += '    \\item $' + escapeLaTeX(label) + '$: [';
+		
+		if (connections.length === 0) {
+			latex += ']';
+		} else {
+			var parts = [];
+			for (var j = 0; j < connections.length; j++) {
+				var conn = connections[j];
+				parts.push('$' + escapeLaTeX(conn.node) + '$');
+			}
+			latex += parts.join(', ') + ']';
+		}
+		
+		latex += '\n';
+	}
+	
+	latex += '\\end{itemize}\n';
+	
+	return latex;
+}
 // draw using this instead of a canvas and call toLaTeX() afterward
 function ExportAsLaTeX() {
 	this._points = [];
@@ -714,6 +925,8 @@ function toggleDirected(){
 	if (svg){ //if svg selected, update svg code
 		saveAsSVG();
 	}
+	// Save the directed state
+	saveBackup();
 }
 function draw() {
 	drawUsing(canvas.getContext('2d'));
@@ -752,6 +965,11 @@ window.onload = function() {
 	canvas = document.getElementById('canvas');
 	restoreBackup();
 	draw();
+	
+	// Initialize keybind system
+	if (typeof initKeybinds === 'function') {
+		initKeybinds();
+	}
 
 	canvas.onmousedown = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
@@ -854,6 +1072,7 @@ window.onload = function() {
 
 var shift = false;
 
+// Legacy keyboard handlers - replaced by keybinds.js but kept as fallback
 document.onkeydown = function(e) {
 	var key = crossBrowserKey(e);
 
@@ -1016,6 +1235,408 @@ function copyOutput() {
 	});
 }
 
+// Keybind System for FSM Designer
+// Educational-focused keyboard shortcuts
+
+// Undo/Redo History
+var undoStack = [];
+var redoStack = [];
+var maxHistorySize = 50;
+
+function saveState() {
+    var state = {
+        nodes: nodes.map(function(n) {
+            return { x: n.x, y: n.y, text: n.text, isAcceptState: n.isAcceptState };
+        }),
+        links: links.map(function(l) {
+            if (l instanceof SelfLink) {
+                return { type: 'SelfLink', node: nodes.indexOf(l.node), text: l.text, anchorAngle: l.anchorAngle };
+            } else if (l instanceof StartLink) {
+                return { type: 'StartLink', node: nodes.indexOf(l.node), text: l.text, deltaX: l.deltaX, deltaY: l.deltaY };
+            } else if (l instanceof Link) {
+                return { type: 'Link', nodeA: nodes.indexOf(l.nodeA), nodeB: nodes.indexOf(l.nodeB), text: l.text, lineAngleAdjust: l.lineAngleAdjust, parallelPart: l.parallelPart, perpendicularPart: l.perpendicularPart };
+            }
+        })
+    };
+    undoStack.push(JSON.stringify(state));
+    if (undoStack.length > maxHistorySize) {
+        undoStack.shift();
+    }
+    redoStack = [];
+}
+
+function restoreState(stateStr) {
+    var state = JSON.parse(stateStr);
+    nodes = [];
+    links = [];
+    
+    for (var i = 0; i < state.nodes.length; i++) {
+        var n = state.nodes[i];
+        var node = new Node(n.x, n.y);
+        node.text = n.text;
+        node.isAcceptState = n.isAcceptState;
+        nodes.push(node);
+    }
+    
+    for (var i = 0; i < state.links.length; i++) {
+        var l = state.links[i];
+        var link = null;
+        if (l.type == 'SelfLink') {
+            link = new SelfLink(nodes[l.node]);
+            link.anchorAngle = l.anchorAngle;
+            link.text = l.text;
+        } else if (l.type == 'StartLink') {
+            link = new StartLink(nodes[l.node]);
+            link.deltaX = l.deltaX;
+            link.deltaY = l.deltaY;
+            link.text = l.text;
+        } else if (l.type == 'Link') {
+            link = new Link(nodes[l.nodeA], nodes[l.nodeB]);
+            link.parallelPart = l.parallelPart;
+            link.perpendicularPart = l.perpendicularPart;
+            link.text = l.text;
+            link.lineAngleAdjust = l.lineAngleAdjust;
+        }
+        if (link != null) {
+            links.push(link);
+        }
+    }
+    
+    selectedObject = null;
+    draw();
+}
+
+function undo() {
+    if (undoStack.length > 0) {
+        var currentState = {
+            nodes: nodes.map(function(n) {
+                return { x: n.x, y: n.y, text: n.text, isAcceptState: n.isAcceptState };
+            }),
+            links: links.map(function(l) {
+                if (l instanceof SelfLink) {
+                    return { type: 'SelfLink', node: nodes.indexOf(l.node), text: l.text, anchorAngle: l.anchorAngle };
+                } else if (l instanceof StartLink) {
+                    return { type: 'StartLink', node: nodes.indexOf(l.node), text: l.text, deltaX: l.deltaX, deltaY: l.deltaY };
+                } else if (l instanceof Link) {
+                    return { type: 'Link', nodeA: nodes.indexOf(l.nodeA), nodeB: nodes.indexOf(l.nodeB), text: l.text, lineAngleAdjust: l.lineAngleAdjust, parallelPart: l.parallelPart, perpendicularPart: l.perpendicularPart };
+                }
+            })
+        };
+        redoStack.push(JSON.stringify(currentState));
+        restoreState(undoStack.pop());
+    }
+}
+
+function redo() {
+    if (redoStack.length > 0) {
+        var currentState = {
+            nodes: nodes.map(function(n) {
+                return { x: n.x, y: n.y, text: n.text, isAcceptState: n.isAcceptState };
+            }),
+            links: links.map(function(l) {
+                if (l instanceof SelfLink) {
+                    return { type: 'SelfLink', node: nodes.indexOf(l.node), text: l.text, anchorAngle: l.anchorAngle };
+                } else if (l instanceof StartLink) {
+                    return { type: 'StartLink', node: nodes.indexOf(l.node), text: l.text, deltaX: l.deltaX, deltaY: l.deltaY };
+                } else if (l instanceof Link) {
+                    return { type: 'Link', nodeA: nodes.indexOf(l.nodeA), nodeB: nodes.indexOf(l.nodeB), text: l.text, lineAngleAdjust: l.lineAngleAdjust, parallelPart: l.parallelPart, perpendicularPart: l.perpendicularPart };
+                }
+            })
+        };
+        undoStack.push(JSON.stringify(currentState));
+        restoreState(redoStack.pop());
+    }
+}
+
+// Duplicate selected object
+function duplicateSelected() {
+    if (selectedObject == null) return;
+    
+    saveState();
+    
+    if (selectedObject instanceof Node) {
+        var newNode = new Node(selectedObject.x + 50, selectedObject.y + 50);
+        newNode.text = selectedObject.text;
+        newNode.isAcceptState = selectedObject.isAcceptState;
+        nodes.push(newNode);
+        selectedObject = newNode;
+        draw();
+    }
+}
+
+// Toggle accept state for selected node (double-click only)
+function toggleAcceptState() {
+    if (selectedObject != null && selectedObject instanceof Node) {
+        saveState();
+        selectedObject.isAcceptState = !selectedObject.isAcceptState;
+        draw();
+    }
+}
+
+// Move selected node with arrow keys
+function moveSelected(dx, dy) {
+    if (selectedObject != null && selectedObject instanceof Node) {
+        saveState();
+        selectedObject.x += dx;
+        selectedObject.y += dy;
+        snapNode(selectedObject);
+        draw();
+    }
+}
+
+// Select all nodes
+function selectAll() {
+    if (nodes.length > 0) {
+        selectedObject = nodes[0];
+        draw();
+    }
+}
+
+// Deselect all
+function deselectAll() {
+    selectedObject = null;
+    draw();
+}
+
+// Clear entire canvas
+function clearCanvas() {
+    if (nodes.length > 0 || links.length > 0) {
+        saveState();
+        nodes = [];
+        links = [];
+        selectedObject = null;
+        draw();
+    }
+}
+
+// Delete selected with undo support
+function deleteSelectedWithUndo() {
+    if (selectedObject != null) {
+        saveState();
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i] == selectedObject) {
+                nodes.splice(i--, 1);
+            }
+        }
+        for (var i = 0; i < links.length; i++) {
+            if (links[i] == selectedObject || links[i].node == selectedObject || links[i].nodeA == selectedObject || links[i].nodeB == selectedObject) {
+                links.splice(i--, 1);
+            }
+        }
+        selectedObject = null;
+        draw();
+    }
+}
+
+// Adjacency export functions
+function exportAdjacencyMatrix() {
+	if (nodes.length === 0) {
+		output('No nodes in the graph to export.');
+		return;
+	}
+	var latexCode = generateAdjacencyMatrix();
+	output(latexCode);
+}
+
+function exportAdjacencyList() {
+	if (nodes.length === 0) {
+		output('No nodes in the graph to export.');
+		return;
+	}
+	var latexCode = generateAdjacencyList();
+	output(latexCode);
+}
+
+// Help modal functions
+function showHelp() {
+    var modal = document.getElementById('helpModal');
+    if (modal) {
+        modal.style.display = 'block';
+    }
+}
+
+function hideHelp() {
+    var modal = document.getElementById('helpModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Enhanced keydown handler
+function handleKeyDown(e) {
+    var key = e.keyCode || e.which;
+    var ctrl = e.ctrlKey || e.metaKey;
+    var shiftKey = e.shiftKey;
+    
+    // Shift key tracking
+    if (key == 16) {
+        shift = true;
+        return true;
+    }
+    
+    // Don't handle if not focused on canvas (except for help)
+    if (!canvasHasFocus()) {
+        // Allow F1 for help even when not focused
+        if (key == 112) { // F1
+            e.preventDefault();
+            showHelp();
+            return false;
+        }
+        return true;
+    }
+    
+    // Ctrl+Z - Undo
+    if (ctrl && key == 90 && !shiftKey) {
+        e.preventDefault();
+        undo();
+        return false;
+    }
+    
+    // Ctrl+Y or Ctrl+Shift+Z - Redo
+    if ((ctrl && key == 89) || (ctrl && shiftKey && key == 90)) {
+        e.preventDefault();
+        redo();
+        return false;
+    }
+    
+    // Ctrl+D - Duplicate
+    if (ctrl && key == 68) {
+        e.preventDefault();
+        duplicateSelected();
+        return false;
+    }
+    
+    // F1 or ? - Help
+    if (key == 112) { // F1
+        e.preventDefault();
+        showHelp();
+        return false;
+    }
+    
+    // Escape - Deselect / Close help
+    if (key == 27) {
+        var modal = document.getElementById('helpModal');
+        if (modal && modal.style.display == 'block') {
+            hideHelp();
+        } else {
+            deselectAll();
+        }
+        return false;
+    }
+    
+    // A - Toggle accept state (when not typing)
+    if (key == 65 && !ctrl && selectedObject instanceof Node && !isTyping()) {
+        e.preventDefault();
+        toggleAcceptState();
+        return false;
+    }
+    
+    // Ctrl+M - Export adjacency matrix
+    if (ctrl && key == 77 && !shiftKey) {
+        e.preventDefault();
+        exportAdjacencyMatrix();
+        return false;
+    }
+    
+    // Ctrl+L - Export adjacency list
+    if (ctrl && key == 76 && !shiftKey) {
+        e.preventDefault();
+        exportAdjacencyList();
+        return false;
+    }
+    
+    // Arrow keys with Shift - Move selected node
+    if (shiftKey && selectedObject instanceof Node) {
+        var moved = false;
+        if (key == 37) { // Left
+            moveSelected(-10, 0);
+            moved = true;
+        } else if (key == 38) { // Up
+            moveSelected(0, -10);
+            moved = true;
+        } else if (key == 39) { // Right
+            moveSelected(10, 0);
+            moved = true;
+        } else if (key == 40) { // Down
+            moveSelected(0, 10);
+            moved = true;
+        }
+        if (moved) {
+            e.preventDefault();
+            return false;
+        }
+    }
+    
+    // Backspace - Delete text character
+    if (key == 8) {
+        if (selectedObject != null && 'text' in selectedObject) {
+            saveState();
+            selectedObject.text = selectedObject.text.substr(0, selectedObject.text.length - 1);
+            resetCaret();
+            draw();
+        }
+        return false;
+    }
+    
+    // Delete - Delete selected object
+    if (key == 46) {
+        deleteSelectedWithUndo();
+        return false;
+    }
+    
+    return true;
+}
+
+// Check if user is typing text into a selected object
+function isTyping() {
+    return selectedObject != null && 'text' in selectedObject && selectedObject.text.length > 0;
+}
+
+// Enhanced keypress handler for text input
+function handleKeyPress(e) {
+    var key = e.keyCode || e.which;
+    
+    if (!canvasHasFocus()) {
+        return true;
+    }
+    
+    // ? key for help (shift+/)
+    if (key == 63) {
+        e.preventDefault();
+        showHelp();
+        return false;
+    }
+    
+    // Text input for selected objects
+    if (key >= 0x20 && key <= 0x7E && !e.metaKey && !e.altKey && !e.ctrlKey && selectedObject != null && 'text' in selectedObject) {
+        // Don't save state for every character - batch them
+        if (selectedObject.text.length == 0) {
+            saveState();
+        }
+        selectedObject.text += String.fromCharCode(key);
+        resetCaret();
+        draw();
+        return false;
+    }
+    
+    if (key == 8) {
+        return false;
+    }
+    
+    return true;
+}
+
+// Initialize keybind handlers
+function initKeybinds() {
+    document.onkeydown = handleKeyDown;
+    document.onkeypress = handleKeyPress;
+    document.onkeyup = function(e) {
+        var key = e.keyCode || e.which;
+        if (key == 16) {
+            shift = false;
+        }
+    };
+}
 function det(a, b, c, d, e, f, g, h, i) {
 	return a*e*i + b*f*g + c*d*h - a*f*h - b*d*i - c*e*g;
 }
@@ -1043,7 +1664,12 @@ function restoreBackup() {
 
 	try {
 		var backup = JSON.parse(localStorage['fsm']);
-
+		
+		// Restore directed state
+		if(backup.hasOwnProperty('directed')) {
+			directed = backup.directed;
+		}
+		
 		for(var i = 0; i < backup.nodes.length; i++) {
 			var backupNode = backup.nodes[i];
 			var node = new Node(backupNode.x, backupNode.y);
@@ -1087,6 +1713,7 @@ function saveBackup() {
 	var backup = {
 		'nodes': [],
 		'links': [],
+		'directed': directed,
 	};
 	for(var i = 0; i < nodes.length; i++) {
 		var node = nodes[i];

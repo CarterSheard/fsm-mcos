@@ -166,6 +166,109 @@ p {
     background-color: #1976D2;
 }
 
+/* === Help Modal Styles === */
+#helpModal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    padding: 24px;
+    z-index: 1000;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+#helpModal h2 {
+    margin: 0 0 16px 0;
+    font-size: 24px;
+    color: #333;
+}
+
+#helpModal table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#helpModal th {
+    text-align: left;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-bottom: 2px solid #ddd;
+}
+
+#helpModal td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+#helpModal kbd {
+    background: #f5f5f5;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+#helpModal button {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 16px;
+}
+
+#helpModal button:hover {
+    background-color: #1976D2;
+}
+
+#modalOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+/* Keybind hint box */
+.keybind-hint {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin: 15px auto;
+    max-width: 800px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.keybind-hint kbd {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    margin: 0 2px;
+}
+
+.keybind-hint a {
+    color: white;
+    text-decoration: underline;
+}
+
 
   </style>
 	<script src="fsm.js"></script>
@@ -206,10 +309,36 @@ if (typeof btoa == 'undefined') {
 
 	</script>
 </head><body>
+	<!-- Help Modal -->
+	<div id="modalOverlay" onclick="hideHelp()"></div>
+	<div id="helpModal">
+		<h2>⌨️ Keyboard Shortcuts</h2>
+		<table>
+			<tr><th>Key</th><th>Action</th></tr>
+			<tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
+			<tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Redo</td></tr>
+			<tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>Duplicate selected</td></tr>
+			<tr><td><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>Export adjacency matrix</td></tr>
+			<tr><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>Export adjacency list</td></tr>
+			<tr><td><kbd>A</kbd></td><td>Toggle accept state</td></tr>
+			<tr><td><kbd>Delete</kbd></td><td>Delete selected</td></tr>
+			<tr><td><kbd>Shift</kbd>+<kbd>↑↓←→</kbd></td><td>Move selected node</td></tr>
+			<tr><td><kbd>Escape</kbd></td><td>Deselect all</td></tr>
+			<tr><td><kbd>F1</kbd> or <kbd>?</kbd></td><td>Show this help</td></tr>
+		</table>
+		<button onclick="hideHelp()">Got it!</button>
+	</div>
+
 	<h1>Finite State Machine Designer</h1>
 	<canvas id="canvas" width="800" height="600">
 		<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
 	</canvas>
+	
+	<!-- Keybind Hint -->
+<div class="keybind-hint">
+	⌨️ Press <kbd>?</kbd> for shortcuts • <kbd>Ctrl+Z</kbd> undo • <kbd>Ctrl+D</kbd> duplicate • <kbd>A</kbd> accept • <kbd>Ctrl+M</kbd> matrix • <kbd>Ctrl+L</kbd> list
+</div>
+	
 	<div>
 		<div class="export-options">
 			<p class="center">Export as: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
@@ -236,4 +365,27 @@ if (typeof btoa == 'undefined') {
 		<p>This was made in HTML5 and JavaScript using the canvas element.</p>
 	</div>
 	<p>Created by <a href="http://madebyevan.com/">Evan Wallace</a> in 2010</p>
+	
+	<script>
+	// Help modal toggle functions
+	function showHelp() {
+		document.getElementById('helpModal').style.display = 'block';
+		document.getElementById('modalOverlay').style.display = 'block';
+	}
+	function hideHelp() {
+		document.getElementById('helpModal').style.display = 'none';
+		document.getElementById('modalOverlay').style.display = 'none';
+	}
+	
+	// Initialize directed checkbox state from localStorage
+	window.addEventListener('load', function() {
+		// Wait for FSM to be initialized
+		setTimeout(function() {
+			var checkbox = document.getElementById('directedLinksCheckbox');
+			if (checkbox && typeof directed !== 'undefined') {
+				checkbox.checked = directed;
+			}
+		}, 100);
+	});
+	</script>
 </body></html>
