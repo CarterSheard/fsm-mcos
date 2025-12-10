@@ -276,24 +276,6 @@ function handleKeyDown(e) {
         return false;
     }
     
-    // Escape - Deselect / Close help
-    if (key == 27) {
-        var modal = document.getElementById('helpModal');
-        if (modal && modal.style.display == 'block') {
-            hideHelp();
-        } else {
-            deselectAll();
-        }
-        return false;
-    }
-    
-    // A - Toggle accept state (when not typing)
-    if (key == 65 && !ctrl && selectedObject instanceof Node && !isTyping()) {
-        e.preventDefault();
-        toggleAcceptState();
-        return false;
-    }
-    
     // Ctrl+M - Export adjacency matrix
     if (ctrl && key == 77 && !shiftKey) {
         e.preventDefault();
