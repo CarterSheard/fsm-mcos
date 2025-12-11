@@ -318,6 +318,10 @@ if (typeof btoa == 'undefined') {
 			<tr><td><kbd>F1</kbd> or <kbd>?</kbd></td><td>Show this help</td></tr>
 			<tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>Duplicate selected</td></tr>
 			<tr><td><kbd>Shift</kbd>+<kbd>↑↓←→</kbd></td><td>Move selected node w arrow keys</td></tr>
+			<tr><td><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>Export Adjacency Matrix</td></tr>
+			<tr><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>Export Adjacency List</td></tr>
+			<tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>Compute MST</td></tr>
+			<tr><td><kbd>M</kbd>+<kbd>L</kbd>+<kbd>B</kbd></td><td>Reveal algorithm links</td></tr>
 		</table>
 		<button onclick="hideHelp()">Got it!</button>
 	</div>
@@ -328,7 +332,7 @@ if (typeof btoa == 'undefined') {
 	</canvas>
 	
 	<div>
-		<p class="center">
+		<p class="center" id="algorithmLinks" style="display: none;">
 			<a href="javascript:exportAdjacencyMatrix()" style="color: #4CAF50; font-weight: bold;">Adjacency Matrix</a> |
 			<a href="javascript:exportAdjacencyList()" style="color: #4CAF50; font-weight: bold;">Adjacency List</a> |
 			<a href="javascript:applyMST()" style="color: #4CAF50; font-weight: bold;">Compute MST</a>

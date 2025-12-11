@@ -1,6 +1,31 @@
 // Keybind System for FSM Designer
 // Educational-focused keyboard shortcuts
 
+// Track key states for combination detection
+var keyStates = {
+    ctrlPressed: false,
+    mPressed: false,
+    lPressed: false,
+    bPressed: false
+};
+
+// Check if Ctrl+M+L+B combination is active
+function checkLinkVisibilityCombo() {
+    if (keyStates.mPressed &&
+        keyStates.lPressed && keyStates.bPressed) {
+        revealAlgorithmLinks();
+    }
+}
+
+// Reveal the algorithm links permanently
+function revealAlgorithmLinks() {
+    var linksElement = document.getElementById('algorithmLinks');
+    if (linksElement && linksElement.style.display === 'none') {
+        linksElement.style.display = 'block';
+        console.log('Algorithm links revealed!');
+    }
+}
+
 // Undo/Redo History
 var undoStack = [];
 var redoStack = [];
@@ -231,6 +256,9 @@ function handleKeyDown(e) {
     var ctrl = e.ctrlKey || e.metaKey;
     var shiftKey = e.shiftKey;
     
+    // Track Ctrl key state
+    keyStates.ctrlPressed = ctrl;
+    
     // Shift key tracking
     if (key == 16) {
         shift = true;
@@ -276,6 +304,12 @@ function handleKeyDown(e) {
         return false;
     }
     
+    // Track M, L, B keys for visibility combo regardless of Ctrl
+    if (key == 77) keyStates.mPressed = true;
+    if (key == 76) keyStates.lPressed = true;
+    if (key == 66) keyStates.bPressed = true;
+    checkLinkVisibilityCombo();
+
     // Ctrl+M - Export adjacency matrix
     if (ctrl && key == 77 && !shiftKey) {
         e.preventDefault();
@@ -290,8 +324,8 @@ function handleKeyDown(e) {
         return false;
     }
     
-    // Ctrl+T - Compute Minimum Spanning Tree
-    if (ctrl && key == 84 && !shiftKey) {
+    // Ctrl+B - Compute Minimum Spanning Tree
+    if (ctrl && key == 66 && !shiftKey) {
         e.preventDefault();
         if (typeof applyMST === 'function') {
             applyMST();
@@ -389,5 +423,11 @@ function initKeybinds() {
         if (key == 16) {
             shift = false;
         }
+        
+        // Reset key states on release
+        keyStates.ctrlPressed = e.ctrlKey || e.metaKey;
+        if (key == 77) keyStates.mPressed = false;  // M
+        if (key == 76) keyStates.lPressed = false;  // L
+        if (key == 66) keyStates.bPressed = false;  // B
     };
 }
