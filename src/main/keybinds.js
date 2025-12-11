@@ -265,17 +265,20 @@ function handleKeyDown(e) {
         return true;
     }
     
-    // Don't handle if not focused on canvas (except for help)
-    if (!canvasHasFocus()) {
-        // Allow F1 for help even when not focused
-        if (key == 112) { // F1
-            e.preventDefault();
-            showHelp();
-            return false;
-        }
-        return true;
+    // Track M, L, B keys for visibility combo BEFORE canvas focus check
+    if (key == 77) keyStates.mPressed = true;
+    if (key == 76) keyStates.lPressed = true;
+    if (key == 66) keyStates.bPressed = true;
+    checkLinkVisibilityCombo();
+    
+    // F1 or ? - Help (works globally)
+    if (key == 112) { // F1
+        e.preventDefault();
+        showHelp();
+        return false;
     }
     
+    // Handle Ctrl-based keybinds BEFORE canvas focus check (so they work globally)
     // Ctrl+Z - Undo
     if (ctrl && key == 90 && !shiftKey) {
         e.preventDefault();
@@ -297,19 +300,6 @@ function handleKeyDown(e) {
         return false;
     }
     
-    // F1 or ? - Help
-    if (key == 112) { // F1
-        e.preventDefault();
-        showHelp();
-        return false;
-    }
-    
-    // Track M, L, B keys for visibility combo regardless of Ctrl
-    if (key == 77) keyStates.mPressed = true;
-    if (key == 76) keyStates.lPressed = true;
-    if (key == 66) keyStates.bPressed = true;
-    checkLinkVisibilityCombo();
-
     // Ctrl+M - Export adjacency matrix
     if (ctrl && key == 77 && !shiftKey) {
         e.preventDefault();
@@ -331,6 +321,11 @@ function handleKeyDown(e) {
             applyMST();
         }
         return false;
+    }
+    
+    // Don't handle remaining keys if not focused on canvas
+    if (!canvasHasFocus()) {
+        return true;
     }
     
     // Arrow keys with Shift - Move selected node
