@@ -1447,15 +1447,46 @@ function crossBrowserRelativeMousePos(e) {
 }
 
 function output(text) {
-	var element = document.getElementById('output');                                              
-    element.style.display = 'block';                                                              
-    element.value = text;  
 	var container = document.getElementById('outputContainer');
 	container.style.display = 'block';
-	var textarea = document.getElementById('output');
-	textarea.value = text;
 	var copyButton = document.getElementById('copyButton');
 	copyButton.textContent = 'Copy';
+	
+	var textarea = document.getElementById('output');
+	var latexContainer = document.getElementById('latexOutputContainer');
+	
+	// Check if we're in LaTeX mode and need split display
+	if (latex && latexContainer) {
+		// Hide the regular textarea, show the LaTeX container
+		textarea.style.display = 'none';
+		latexContainer.style.display = 'block';
+		
+		// Split the LaTeX content into preamble, center, and end
+		var centerStart = text.indexOf('\\begin{center}');
+		var centerEnd = text.indexOf('\\end{center}');
+		
+		if (centerStart !== -1 && centerEnd !== -1) {
+			var preamble = text.substring(0, centerStart);
+			var centerContent = text.substring(centerStart, centerEnd + '\\end{center}'.length);
+			var endContent = text.substring(centerEnd + '\\end{center}'.length);
+			
+			document.getElementById('latexPreamble').textContent = preamble;
+			document.getElementById('latexCenter').textContent = centerContent;
+			document.getElementById('latexEnd').textContent = endContent;
+		} else {
+			// Fallback if we can't find the markers
+			document.getElementById('latexPreamble').textContent = '';
+			document.getElementById('latexCenter').textContent = text;
+			document.getElementById('latexEnd').textContent = '';
+		}
+	} else {
+		// Use regular textarea for non-LaTeX output
+		textarea.style.display = 'block';
+		if (latexContainer) {
+			latexContainer.style.display = 'none';
+		}
+		textarea.value = text;
+	}
 }
 
 function saveAsPNG() {
@@ -1496,10 +1527,30 @@ function saveAsLaTeX() {
 function copyOutput() {
 	var textarea = document.getElementById('output');
 	var copyButton = document.getElementById('copyButton');
+	var latexCenterElement = document.getElementById('latexCenter');
+	
+	// Determine what content to copy
+	var textToCopy;
+	
+	// If in LaTeX mode, copy only the center content
+	if (latex && latexCenterElement) {
+		textToCopy = latexCenterElement.textContent;
+	} else {
+		textToCopy = textarea.value;
+	}
 
-	navigator.clipboard.writeText(textarea.value).then(function() {
+	navigator.clipboard.writeText(textToCopy).then(function() {
 		// Success feedback
 		copyButton.textContent = 'Copied!';
+		
+		// Add green flash animation for LaTeX mode (only on center element)
+		if (latex && latexCenterElement) {
+			latexCenterElement.classList.add('copy-flash');
+			setTimeout(function() {
+				latexCenterElement.classList.remove('copy-flash');
+			}, 800);
+		}
+		
 		setTimeout(function() {
 			copyButton.textContent = 'Copy';
 		}, 2000); // Revert after 2 seconds

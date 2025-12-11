@@ -166,6 +166,53 @@ p {
     background-color: #1976D2;
 }
 
+/* === Green Flash Animation for Copy Feedback === */
+@keyframes copyFlash {
+    0% {
+        background-color: #4CAF50; /* Green */
+        color: white;
+    }
+    100% {
+        background-color: #f5f5f5;
+        color: black;
+    }
+}
+
+#output.copy-flash {
+    animation: copyFlash 0.8s ease-out;
+}
+
+/* === LaTeX Split Output Container === */
+#latexOutputContainer {
+    display: none;
+    width: 75%;
+    margin: 0 auto;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    max-height: 400px;
+    overflow-y: auto;
+    text-align: left;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    background: white;
+}
+
+#latexOutputContainer pre {
+    margin: 0;
+    padding: 8px 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+#latexPreamble, #latexEnd, #latexCenter {
+    background-color: white;
+    color: black;
+}
+
+#latexCenter.copy-flash {
+    animation: copyFlash 0.8s ease-out;
+}
+
 /* === Help Modal Styles === */
 #helpModal {
     display: none;
@@ -347,6 +394,11 @@ if (typeof btoa == 'undefined') {
 		<div id="outputContainer" style="display: none; text-align: center;">
 			<button id="copyButton" onclick="copyOutput()">Copy</button>
 			<textarea id="output" style="width: 75%; height: 400px; margin: 0 auto; display: block;"></textarea>
+			<div id="latexOutputContainer">
+				<pre id="latexPreamble"></pre>
+				<pre id="latexCenter"></pre>
+				<pre id="latexEnd"></pre>
+			</div>
 		</div>
 		<p>The big white box above is the FSM designer.&nbsp; Here's how to use it:</p>
 		<ul>
