@@ -214,7 +214,8 @@ p {
 }
 
 /* === Help Modal Styles === */
-#helpModal {
+#helpModal,
+#importModal {
     display: none;
     position: fixed;
     top: 50%;
@@ -230,13 +231,15 @@ p {
     overflow-y: auto;
 }
 
-#helpModal h2 {
+#helpModal h2,
+#importModal h2 {
     margin: 0 0 16px 0;
     font-size: 24px;
     color: #333;
 }
 
-#helpModal table {
+#helpModal table,
+#importModal table {
     width: 100%;
     border-collapse: collapse;
 }
@@ -279,7 +282,8 @@ p {
     background-color: #1976D2;
 }
 
-#modalOverlay {
+#modalOverlay,
+#importModalOverlay {
     display: none;
     position: fixed;
     top: 0;
@@ -288,6 +292,81 @@ p {
     height: 100%;
     background: rgba(0,0,0,0.5);
     z-index: 999;
+}
+
+/* === Import Modal Specific Styles === */
+#importModal {
+    max-width: 600px;
+    min-width: 400px;
+}
+
+#importModal p {
+    margin: 0 0 12px 0;
+    color: #666;
+}
+
+#latexInput {
+    width: 100%;
+    height: 200px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    resize: vertical;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+}
+
+#latexInput:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.import-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.import-buttons button {
+    padding: 10px 24px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    border: none;
+}
+
+.import-buttons button:first-child {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.import-buttons button:first-child:hover {
+    background-color: #e0e0e0;
+}
+
+.import-buttons button.primary {
+    background-color: #2196F3;
+    color: white;
+}
+
+.import-buttons button.primary:hover {
+    background-color: #1976D2;
+}
+
+#importError {
+    color: #dc3545;
+    font-size: 13px;
+    margin-top: 12px;
+    padding: 8px 12px;
+    background-color: #fff5f5;
+    border: 1px solid #ffcdd2;
+    border-radius: 4px;
+    display: none;
 }
 
 /* Keybind hint box */
@@ -341,7 +420,31 @@ p {
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
+/* Import Button */
+#importButton {
+    position: absolute;
+    top: 60px;
+    right: -120px;
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 13px 13.75px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background-color 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
 
+#importButton:hover {
+    background-color: #1976D2;
+}
+
+#importButton:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
 
   </style>
 	<script src="fsm.js"></script>
@@ -382,6 +485,26 @@ if (typeof btoa == 'undefined') {
 
 	</script>
 </head><body>
+	<!-- Import Modal -->
+	<div id="importModalOverlay" onclick="hideImportModal()"></div>
+	<div id="importModal">
+		<h2>📥 Import LaTeX</h2>
+		<p>Paste TikZ LaTeX code below (from this tool's export format):</p>
+		<textarea id="latexInput" placeholder="Paste your TikZ LaTeX code here...
+
+Example:
+\begin{tikzpicture}[scale=0.2]
+\tikzstyle{every node}+=[inner sep=0pt]
+\draw [black] (30,-30) circle (3);
+\draw (30,-30) node {$q_0$};
+\end{tikzpicture}"></textarea>
+		<div id="importError"></div>
+		<div class="import-buttons">
+			<button onclick="hideImportModal()">Cancel</button>
+			<button onclick="importLaTeX()" class="primary">Import</button>
+		</div>
+	</div>
+
 	<!-- Help Modal -->
 	<div id="modalOverlay" onclick="hideHelp()"></div>
 	<div id="helpModal">
@@ -405,6 +528,7 @@ if (typeof btoa == 'undefined') {
 			<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
 		</canvas>
 		<button id="deleteAllButton" onclick="clearCanvas()">Delete All</button>
+		<button id="importButton" onclick="showImportModal()">Import LaTeX</button>
 	</div>
 	
 	<div>
