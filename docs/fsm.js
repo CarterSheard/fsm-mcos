@@ -1667,20 +1667,48 @@ function drawUsing(c) {
 	c.save();
 	c.translate(0.5, 0.5);
 
+	// Draw simulation overlay (input string display) first
+	if (simulationActive && currentSimulation && typeof drawSimulationOverlay === 'function') {
+		drawSimulationOverlay(c);
+	}
+
 	for(var i = 0; i < nodes.length; i++) {
 		c.lineWidth = 1;
 		c.fillStyle = c.strokeStyle = (nodes[i] == selectedObject) ? 'blue' : 'black';
-		nodes[i].draw(c);
+		
+		// Check for simulation highlight
+		var simHighlighted = false;
+		if (simulationActive && currentSimulation && typeof drawNodeWithSimulation === 'function') {
+			simHighlighted = drawNodeWithSimulation(c, nodes[i], i, nodes[i] == selectedObject);
+		}
+		
+		if (!simHighlighted) {
+			nodes[i].draw(c);
+		}
 	}
 	for(var i = 0; i < links.length; i++) {
 		c.lineWidth = 1;
 		c.fillStyle = c.strokeStyle = (links[i] == selectedObject) ? 'blue' : 'black';
-		links[i].draw(c);
+		
+		// Check for simulation highlight
+		var simHighlighted = false;
+		if (simulationActive && currentSimulation && typeof drawLinkWithSimulation === 'function') {
+			simHighlighted = drawLinkWithSimulation(c, links[i], links[i] == selectedObject);
+		}
+		
+		if (!simHighlighted) {
+			links[i].draw(c);
+		}
 	}
 	if(currentLink != null) {
 		c.lineWidth = 1;
 		c.fillStyle = c.strokeStyle = 'black';
 		currentLink.draw(c);
+	}
+
+	// Draw result banner if simulation is complete
+	if (simulationActive && currentSimulation && typeof drawResultBanner === 'function') {
+		drawResultBanner(c, canvas.width, canvas.height);
 	}
 
 	c.restore();
@@ -2381,6 +2409,44 @@ function handleKeyDown(e) {
         return false;
     }
     
+    // Ctrl+R - Toggle Simulation Mode
+    if (ctrl && key == 82 && !shiftKey) {
+        e.preventDefault();
+        if (typeof toggleSimulationMode === 'function') {
+            toggleSimulationMode();
+        }
+        return false;
+    }
+    
+    // Escape - Exit simulation mode (if active)
+    if (key == 27) { // Escape key
+        if (typeof simulationActive !== 'undefined' && simulationActive) {
+            e.preventDefault();
+            if (typeof exitSimulationMode === 'function') {
+                exitSimulationMode();
+            }
+            return false;
+        }
+    }
+    
+    // Space - Step simulation (when in simulation mode)
+    if (key == 32 && typeof simulationActive !== 'undefined' && simulationActive) {
+        e.preventDefault();
+        if (typeof handleStepSimulation === 'function') {
+            handleStepSimulation();
+        }
+        return false;
+    }
+    
+    // Enter - Play/Pause simulation (when in simulation mode)
+    if (key == 13 && typeof simulationActive !== 'undefined' && simulationActive) {
+        e.preventDefault();
+        if (typeof handlePlayPause === 'function') {
+            handlePlayPause();
+        }
+        return false;
+    }
+    
     // Don't handle remaining keys if not focused on canvas
     if (!canvasHasFocus()) {
         return true;
@@ -2607,4 +2673,1076 @@ function saveBackup() {
 	}
 
 	localStorage['fsm'] = JSON.stringify(backup);
+}
+
+// FSM Simulation Animator
+// Visual animation and canvas rendering for simulation
+
+// Animation state for highlighting
+var animationState = {
+    highlightedStates: [],    // Array of {index, color}
+    highlightedLinks: [],     // Array of {link, color}
+    currentChar: null,
+    currentPosition: 0,
+    totalLength: 0,
+    resultDisplay: null       // 'accepted', 'rejected', 'stuck', null
+};
+
+// Colors for animation
+var simColors = {
+    currentState: '#FFA500',      // Orange/Gold for current state
+    activeTransition: '#FFA500',  // Orange for active transition
+    acceptedState: '#4CAF50',     // Green for accepted
+    rejectedState: '#f44336',     // Red for rejected
+    stuckState: '#f44336',        // Red for stuck
+    nfaSecondary: '#FFD700',      // Lighter gold for secondary NFA paths
+    pathTrace: '#90CAF9'          // Light blue for path trace
+};
+
+// Clear all animation highlights
+function clearAnimationState() {
+    animationState.highlightedStates = [];
+    animationState.highlightedLinks = [];
+    animationState.currentChar = null;
+    animationState.currentPosition = 0;
+    animationState.totalLength = 0;
+    animationState.resultDisplay = null;
+}
+
+// Set highlighted states (for current simulation position)
+function highlightStates(stateIndices, color) {
+    animationState.highlightedStates = stateIndices.map(function(idx, i) {
+        return { 
+            index: idx, 
+            color: color || simColors.currentState,
+            // Use slightly different color for secondary NFA paths
+            isPrimary: i === 0
+        };
+    });
+}
+
+// Set highlighted transitions (links being traversed)
+function highlightTransitions(links, color) {
+    animationState.highlightedLinks = links.map(function(link) {
+        return { 
+            link: link, 
+            color: color || simColors.activeTransition 
+        };
+    });
+}
+
+// Update animation state from simulation state
+function updateAnimationFromSimulation(simState, nodes) {
+    if (!simState) {
+        clearAnimationState();
+        return;
+    }
+    
+    // Update highlighted states
+    highlightStates(simState.currentStates);
+    
+    // Update highlighted links (active transitions from last step)
+    if (simState.activeLinks) {
+        highlightTransitions(simState.activeLinks);
+    } else {
+        animationState.highlightedLinks = [];
+    }
+    
+    // Update current character info
+    animationState.currentChar = simState.currentPosition < simState.inputString.length 
+        ? simState.inputString[simState.currentPosition] 
+        : null;
+    animationState.currentPosition = simState.currentPosition;
+    animationState.totalLength = simState.inputString.length;
+    
+    // Update result display
+    if (simState.isComplete) {
+        animationState.resultDisplay = simState.result;
+        
+        // Change state colors based on result
+        var resultColor = simState.result === 'accepted' ? simColors.acceptedState : simColors.rejectedState;
+        animationState.highlightedStates = simState.currentStates.map(function(idx) {
+            return { index: idx, color: resultColor, isPrimary: true };
+        });
+    } else {
+        animationState.resultDisplay = null;
+    }
+}
+
+// Check if a node should be highlighted and get its highlight info
+function getNodeHighlight(nodeIndex) {
+    for (var i = 0; i < animationState.highlightedStates.length; i++) {
+        var hs = animationState.highlightedStates[i];
+        if (hs.index === nodeIndex) {
+            return hs;
+        }
+    }
+    return null;
+}
+
+// Check if a link should be highlighted and get its highlight info
+function getLinkHighlight(link) {
+    for (var i = 0; i < animationState.highlightedLinks.length; i++) {
+        var hl = animationState.highlightedLinks[i];
+        if (hl.link === link) {
+            return hl;
+        }
+    }
+    return null;
+}
+
+// Draw simulation overlay on canvas (called after main drawing)
+function drawSimulationOverlay(c) {
+    if (!simulationActive || !currentSimulation) {
+        return;
+    }
+    
+    // Draw current character indicator near top of canvas
+    if (animationState.currentChar !== null || animationState.totalLength > 0) {
+        drawInputStringDisplay(c);
+    }
+}
+
+// Draw the input string with current position highlighted
+function drawInputStringDisplay(c) {
+    var inputString = currentSimulation ? currentSimulation.inputString : '';
+    var position = animationState.currentPosition;
+    
+    c.save();
+    c.font = '16px "Consolas", monospace';
+    
+    var x = 20;
+    var y = 30;
+    
+    // Draw label
+    c.fillStyle = '#666';
+    c.fillText('Input: ', x, y);
+    x += c.measureText('Input: ').width;
+    
+    // Draw the string with highlighting
+    if (inputString.length === 0) {
+        c.fillStyle = '#999';
+        c.fillText('(empty string)', x, y);
+    } else {
+        for (var i = 0; i < inputString.length; i++) {
+            var char = inputString[i];
+            
+            if (i === position && !animationState.resultDisplay) {
+                // Current character - highlight with background
+                var charWidth = c.measureText(char).width + 4;
+                c.fillStyle = simColors.currentState;
+                c.fillRect(x - 2, y - 14, charWidth, 20);
+                c.fillStyle = 'white';
+                c.fillText(char, x, y);
+                x += charWidth;
+            } else if (i < position) {
+                // Already processed - gray
+                c.fillStyle = '#999';
+                c.fillText(char, x, y);
+                x += c.measureText(char).width + 2;
+            } else {
+                // Not yet processed - black
+                c.fillStyle = '#333';
+                c.fillText(char, x, y);
+                x += c.measureText(char).width + 2;
+            }
+        }
+    }
+    
+    // Draw position indicator
+    c.fillStyle = '#666';
+    var posText = ' [' + position + '/' + inputString.length + ']';
+    c.fillText(posText, x + 10, y);
+    
+    c.restore();
+}
+
+// Show result banner overlay
+function drawResultBanner(c, canvasWidth, canvasHeight) {
+    if (!animationState.resultDisplay) {
+        return;
+    }
+    
+    var text, bgColor;
+    
+    switch (animationState.resultDisplay) {
+        case 'accepted':
+            text = '✓ ACCEPTED';
+            bgColor = simColors.acceptedState;
+            break;
+        case 'rejected':
+            text = '✗ REJECTED';
+            bgColor = simColors.rejectedState;
+            break;
+        case 'stuck':
+            text = '✗ STUCK - No valid transition';
+            bgColor = simColors.stuckState;
+            break;
+        default:
+            return;
+    }
+    
+    c.save();
+    
+    // Draw banner at bottom of canvas
+    var bannerHeight = 50;
+    var bannerY = canvasHeight - bannerHeight - 20;
+    
+    // Semi-transparent background
+    c.fillStyle = bgColor;
+    c.globalAlpha = 0.9;
+    c.fillRect(0, bannerY, canvasWidth, bannerHeight);
+    c.globalAlpha = 1.0;
+    
+    // Text
+    c.fillStyle = 'white';
+    c.font = 'bold 24px "Segoe UI", sans-serif';
+    c.textAlign = 'center';
+    c.fillText(text, canvasWidth / 2, bannerY + 33);
+    
+    c.restore();
+}
+
+// Modified node drawing with simulation highlights
+function drawNodeWithSimulation(c, node, nodeIndex, isSelected) {
+    var highlight = getNodeHighlight(nodeIndex);
+    
+    if (highlight) {
+        // Save context for glow effect
+        c.save();
+        
+        // Draw glow/shadow
+        c.shadowColor = highlight.color;
+        c.shadowBlur = 20;
+        c.shadowOffsetX = 0;
+        c.shadowOffsetY = 0;
+        
+        // Draw filled circle with highlight color (semi-transparent)
+        c.beginPath();
+        c.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
+        c.fillStyle = highlight.color + '40'; // 25% opacity
+        c.fill();
+        
+        // Draw the main circle
+        c.strokeStyle = highlight.color;
+        c.lineWidth = 3;
+        c.stroke();
+        
+        c.restore();
+        
+        // Draw the text
+        c.fillStyle = highlight.color;
+        drawText(c, node.text, node.x, node.y, null, isSelected);
+        
+        // Draw accept state inner circle if needed
+        if (node.isAcceptState) {
+            c.beginPath();
+            c.arc(node.x, node.y, nodeRadius - 6, 0, 2 * Math.PI, false);
+            c.strokeStyle = highlight.color;
+            c.lineWidth = 2;
+            c.stroke();
+        }
+        
+        return true; // Indicate we handled drawing
+    }
+    
+    return false; // Let normal drawing handle it
+}
+
+// Modified link drawing with simulation highlights
+function drawLinkWithSimulation(c, link, isSelected) {
+    var highlight = getLinkHighlight(link);
+    
+    if (highlight) {
+        c.save();
+        
+        // Draw with highlight color and glow
+        c.strokeStyle = highlight.color;
+        c.fillStyle = highlight.color;
+        c.lineWidth = 3;
+        c.shadowColor = highlight.color;
+        c.shadowBlur = 10;
+        
+        // Call the link's draw method (it will use our modified context)
+        link.draw(c);
+        
+        c.restore();
+        
+        return true; // Indicate we handled drawing
+    }
+    
+    return false; // Let normal drawing handle it
+}
+
+// Pulse animation for self-loops
+var pulsePhase = 0;
+function updatePulseAnimation() {
+    pulsePhase = (pulsePhase + 0.1) % (2 * Math.PI);
+}
+
+// Get pulse intensity (0-1) for animated effects
+function getPulseIntensity() {
+    return 0.5 + 0.5 * Math.sin(pulsePhase);
+}
+// FSM Simulation Engine
+// Core logic for simulating finite state machines
+
+// Global simulation state
+var simulationActive = false;
+var currentSimulation = null;
+
+// Simulation state structure
+function SimulationState(inputString, startNodeIndex, transitionTable) {
+    this.inputString = inputString;
+    this.currentPosition = 0;
+    this.currentStates = [startNodeIndex]; // Array for NFA support
+    this.paths = [{
+        states: [startNodeIndex],
+        transitions: [],
+        status: 'active' // 'active', 'accepted', 'rejected'
+    }];
+    this.isPlaying = false;
+    this.speed = 500; // ms between steps
+    this.isComplete = false;
+    this.result = null; // 'accepted', 'rejected', 'stuck'
+    this.errorMessage = null;
+    this.transitionTable = transitionTable;
+}
+
+// Parse transition label into array of symbols
+function parseTransitionLabel(text) {
+    if (!text || text.trim() === '') {
+        return [];
+    }
+    
+    // Split by comma, trim each symbol
+    var symbols = text.split(',').map(function(s) {
+        return s.trim();
+    });
+    
+    // Filter out empty strings
+    return symbols.filter(function(s) {
+        return s.length > 0;
+    });
+}
+
+// Build transition lookup table from links
+function buildTransitionTable(nodes, links) {
+    var table = {};
+    
+    // Initialize for each node
+    for (var i = 0; i < nodes.length; i++) {
+        table[i] = {};
+    }
+    
+    // Process each link
+    for (var i = 0; i < links.length; i++) {
+        var link = links[i];
+        
+        if (link instanceof Link) {
+            var fromIndex = nodes.indexOf(link.nodeA);
+            var toIndex = nodes.indexOf(link.nodeB);
+            var symbols = parseTransitionLabel(link.text);
+            
+            // Create transition for each symbol
+            for (var j = 0; j < symbols.length; j++) {
+                var symbol = symbols[j];
+                if (!table[fromIndex][symbol]) {
+                    table[fromIndex][symbol] = [];
+                }
+                // Store both target index and the link reference for highlighting
+                table[fromIndex][symbol].push({
+                    targetIndex: toIndex,
+                    link: link
+                });
+            }
+        } else if (link instanceof SelfLink) {
+            var nodeIndex = nodes.indexOf(link.node);
+            var symbols = parseTransitionLabel(link.text);
+            
+            for (var j = 0; j < symbols.length; j++) {
+                var symbol = symbols[j];
+                if (!table[nodeIndex][symbol]) {
+                    table[nodeIndex][symbol] = [];
+                }
+                table[nodeIndex][symbol].push({
+                    targetIndex: nodeIndex,
+                    link: link
+                });
+            }
+        }
+    }
+    
+    return table;
+}
+
+// Find the start state node
+function findStartState(nodes, links) {
+    for (var i = 0; i < links.length; i++) {
+        if (links[i] instanceof StartLink) {
+            return nodes.indexOf(links[i].node);
+        }
+    }
+    return -1;
+}
+
+// Validate FSM is ready for simulation
+function validateFSM(nodes, links) {
+    var errors = [];
+    var warnings = [];
+    
+    // Check for at least one node
+    if (nodes.length === 0) {
+        errors.push('No states in FSM. Add at least one state.');
+    }
+    
+    // Check for start state
+    var startLinks = links.filter(function(l) {
+        return l instanceof StartLink;
+    });
+    
+    if (startLinks.length === 0) {
+        errors.push('No start state defined. Add a start arrow (→) to a state by shift-dragging from empty space to a node.');
+    } else if (startLinks.length > 1) {
+        errors.push('Multiple start states detected. Only one start state allowed.');
+    }
+    
+    // Check for at least one transition (optional warning)
+    var regularLinks = links.filter(function(l) {
+        return l instanceof Link || l instanceof SelfLink;
+    });
+    
+    if (regularLinks.length === 0 && nodes.length > 0) {
+        warnings.push('No transitions defined. FSM will only accept empty string if start state is accepting.');
+    }
+    
+    // Check for accept states
+    var hasAcceptState = nodes.some(function(n) {
+        return n.isAcceptState;
+    });
+    
+    if (!hasAcceptState && nodes.length > 0) {
+        warnings.push('No accept states defined. All strings will be rejected.');
+    }
+    
+    return {
+        valid: errors.length === 0,
+        errors: errors,
+        warnings: warnings
+    };
+}
+
+// Get alphabet (all symbols used in transitions)
+function getAlphabet(links) {
+    var alphabet = {};
+    
+    for (var i = 0; i < links.length; i++) {
+        var link = links[i];
+        if (link instanceof Link || link instanceof SelfLink) {
+            var symbols = parseTransitionLabel(link.text);
+            for (var j = 0; j < symbols.length; j++) {
+                alphabet[symbols[j]] = true;
+            }
+        }
+    }
+    
+    return Object.keys(alphabet).sort();
+}
+
+// Validate input string against alphabet
+function validateInputString(inputString, links) {
+    var alphabet = getAlphabet(links);
+    var invalidChars = [];
+    
+    for (var i = 0; i < inputString.length; i++) {
+        var char = inputString[i];
+        if (alphabet.indexOf(char) === -1) {
+            if (invalidChars.indexOf(char) === -1) {
+                invalidChars.push(char);
+            }
+        }
+    }
+    
+    return {
+        valid: invalidChars.length === 0,
+        invalidChars: invalidChars,
+        alphabet: alphabet
+    };
+}
+
+// Initialize simulation state
+function initializeSimulation(inputString, nodes, links) {
+    // Validate FSM first
+    var validation = validateFSM(nodes, links);
+    if (!validation.valid) {
+        return {
+            success: false,
+            errors: validation.errors,
+            warnings: validation.warnings
+        };
+    }
+    
+    // Find start state
+    var startIndex = findStartState(nodes, links);
+    if (startIndex === -1) {
+        return {
+            success: false,
+            errors: ['Could not find start state.'],
+            warnings: []
+        };
+    }
+    
+    // Build transition table
+    var transitionTable = buildTransitionTable(nodes, links);
+    
+    // Create simulation state
+    var simState = new SimulationState(inputString, startIndex, transitionTable);
+    
+    // Handle empty string case
+    if (inputString.length === 0) {
+        simState.isComplete = true;
+        if (nodes[startIndex].isAcceptState) {
+            simState.result = 'accepted';
+            simState.paths[0].status = 'accepted';
+        } else {
+            simState.result = 'rejected';
+            simState.paths[0].status = 'rejected';
+        }
+    }
+    
+    return {
+        success: true,
+        simulation: simState,
+        warnings: validation.warnings
+    };
+}
+
+// Execute single step of simulation (handles NFA with multiple paths)
+function stepSimulation(simState, nodes) {
+    if (simState.isComplete) {
+        return simState;
+    }
+    
+    var currentChar = simState.inputString[simState.currentPosition];
+    var newPaths = [];
+    var activeLinksThisStep = [];
+    var newCurrentStates = [];
+    
+    // Process each active path
+    for (var p = 0; p < simState.paths.length; p++) {
+        var path = simState.paths[p];
+        
+        if (path.status !== 'active') {
+            newPaths.push(path);
+            continue;
+        }
+        
+        var currentState = path.states[path.states.length - 1];
+        var transitions = simState.transitionTable[currentState][currentChar];
+        
+        if (!transitions || transitions.length === 0) {
+            // No transition available - path is stuck/rejected
+            path.status = 'rejected';
+            path.errorMessage = "No transition for '" + currentChar + "' from state " + (nodes[currentState].text || ('q' + currentState));
+            newPaths.push(path);
+        } else {
+            // Create new paths for each possible transition (NFA support)
+            for (var t = 0; t < transitions.length; t++) {
+                var transition = transitions[t];
+                var targetIndex = transition.targetIndex;
+                
+                // Track which links are being used this step
+                if (activeLinksThisStep.indexOf(transition.link) === -1) {
+                    activeLinksThisStep.push(transition.link);
+                }
+                
+                // Create new or extend path
+                var newPath;
+                if (t === 0 && transitions.length === 1) {
+                    // Single transition - extend existing path
+                    path.states.push(targetIndex);
+                    path.transitions.push(transition.link);
+                    newPath = path;
+                } else {
+                    // Multiple transitions (NFA) - create new path
+                    newPath = {
+                        states: path.states.slice(0, -1).concat([currentState, targetIndex]),
+                        transitions: path.transitions.slice().concat([transition.link]),
+                        status: 'active'
+                    };
+                }
+                newPaths.push(newPath);
+                
+                if (newCurrentStates.indexOf(targetIndex) === -1) {
+                    newCurrentStates.push(targetIndex);
+                }
+            }
+        }
+    }
+    
+    simState.paths = newPaths;
+    simState.currentStates = newCurrentStates;
+    simState.activeLinks = activeLinksThisStep;
+    simState.currentPosition++;
+    
+    // Check if simulation is complete
+    if (simState.currentPosition >= simState.inputString.length) {
+        simState.isComplete = true;
+        
+        // Determine final result
+        var anyAccepted = false;
+        var allRejected = true;
+        
+        for (var p = 0; p < simState.paths.length; p++) {
+            var path = simState.paths[p];
+            if (path.status === 'active') {
+                var finalState = path.states[path.states.length - 1];
+                if (nodes[finalState].isAcceptState) {
+                    path.status = 'accepted';
+                    anyAccepted = true;
+                } else {
+                    path.status = 'rejected';
+                }
+                allRejected = allRejected && (path.status === 'rejected');
+            }
+        }
+        
+        simState.result = anyAccepted ? 'accepted' : 'rejected';
+    }
+    
+    // Check if all paths are stuck (rejected before end of string)
+    var allPathsRejected = simState.paths.every(function(p) {
+        return p.status === 'rejected';
+    });
+    
+    if (allPathsRejected && !simState.isComplete) {
+        simState.isComplete = true;
+        simState.result = 'stuck';
+        // Find the error message from the last rejected path
+        for (var p = simState.paths.length - 1; p >= 0; p--) {
+            if (simState.paths[p].errorMessage) {
+                simState.errorMessage = simState.paths[p].errorMessage;
+                break;
+            }
+        }
+    }
+    
+    return simState;
+}
+
+// Check if simulation is complete
+function isSimulationComplete(simState) {
+    return simState.isComplete;
+}
+
+// Get final result
+function getFinalResult(simState) {
+    return {
+        result: simState.result,
+        paths: simState.paths,
+        errorMessage: simState.errorMessage
+    };
+}
+
+// Get current simulation info for display
+function getSimulationInfo(simState, nodes) {
+    var info = {
+        currentChar: simState.currentPosition < simState.inputString.length 
+            ? simState.inputString[simState.currentPosition] 
+            : null,
+        position: simState.currentPosition,
+        totalLength: simState.inputString.length,
+        currentStateNames: [],
+        activePaths: 0,
+        isComplete: simState.isComplete,
+        result: simState.result
+    };
+    
+    // Get names of current states
+    for (var i = 0; i < simState.currentStates.length; i++) {
+        var stateIndex = simState.currentStates[i];
+        var stateName = nodes[stateIndex].text || ('q' + stateIndex);
+        info.currentStateNames.push(stateName);
+    }
+    
+    // Count active paths
+    for (var p = 0; p < simState.paths.length; p++) {
+        if (simState.paths[p].status === 'active') {
+            info.activePaths++;
+        }
+    }
+    
+    return info;
+}
+
+// Reset simulation to initial state
+function resetSimulation() {
+    currentSimulation = null;
+    simulationActive = false;
+}
+// FSM Simulation UI Controls
+// UI panel, controls, and user interaction
+
+// Play/pause interval reference
+var simulationInterval = null;
+
+// Initialize simulation UI panel
+function initSimulationUI() {
+    var panel = document.getElementById('simulationPanel');
+    if (panel) {
+        // Set up event listeners
+        var startBtn = document.getElementById('simStart');
+        var stepBtn = document.getElementById('simStep');
+        var playPauseBtn = document.getElementById('simPlayPause');
+        var resetBtn = document.getElementById('simReset');
+        var speedSlider = document.getElementById('simSpeed');
+        var inputField = document.getElementById('simInput');
+        
+        if (startBtn) startBtn.onclick = handleStartSimulation;
+        if (stepBtn) stepBtn.onclick = handleStepSimulation;
+        if (playPauseBtn) playPauseBtn.onclick = handlePlayPause;
+        if (resetBtn) resetBtn.onclick = handleResetSimulation;
+        if (speedSlider) {
+            speedSlider.oninput = function() {
+                updateSimulationSpeed(this.value);
+            };
+        }
+        
+        // Allow Enter key in input field to start simulation
+        if (inputField) {
+            inputField.onkeypress = function(e) {
+                if (e.key === 'Enter') {
+                    handleStartSimulation();
+                }
+            };
+        }
+    }
+}
+
+// Show simulation panel
+function showSimulationPanel() {
+    var panel = document.getElementById('simulationPanel');
+    if (panel) {
+        panel.style.display = 'block';
+        // Focus the input field
+        var inputField = document.getElementById('simInput');
+        if (inputField) {
+            inputField.focus();
+        }
+    }
+}
+
+// Hide simulation panel
+function hideSimulationPanel() {
+    var panel = document.getElementById('simulationPanel');
+    if (panel) {
+        panel.style.display = 'none';
+    }
+}
+
+// Enter simulation mode
+function enterSimulationMode() {
+    showSimulationPanel();
+    simulationActive = true;
+    updateControlStates(false, false); // Not started yet
+    updateStatusDisplay();
+}
+
+// Exit simulation mode
+function exitSimulationMode() {
+    hideSimulationPanel();
+    handleResetSimulation();
+    simulationActive = false;
+    currentSimulation = null;
+    clearAnimationState();
+    draw();
+}
+
+// Toggle simulation mode
+function toggleSimulationMode() {
+    if (simulationActive) {
+        exitSimulationMode();
+    } else {
+        enterSimulationMode();
+    }
+}
+
+// Handle start button click
+function handleStartSimulation() {
+    var inputField = document.getElementById('simInput');
+    var inputString = inputField ? inputField.value : '';
+    
+    // Initialize simulation
+    var result = initializeSimulation(inputString, nodes, links);
+    
+    if (!result.success) {
+        showSimulationError(result.errors.join('\n'));
+        return;
+    }
+    
+    // Show warnings if any
+    if (result.warnings && result.warnings.length > 0) {
+        console.log('Simulation warnings:', result.warnings);
+    }
+    
+    currentSimulation = result.simulation;
+    
+    // Update animation state for initial position
+    updateAnimationFromSimulation(currentSimulation, nodes);
+    
+    // Enable control buttons
+    updateControlStates(true, false);
+    
+    // Update display
+    updateStatusDisplay();
+    draw();
+    
+    // Check if already complete (empty string case)
+    if (currentSimulation.isComplete) {
+        showFinalResult();
+    }
+}
+
+// Handle step button click
+function handleStepSimulation() {
+    if (!currentSimulation || currentSimulation.isComplete) {
+        return;
+    }
+    
+    // Execute one step
+    stepSimulation(currentSimulation, nodes);
+    
+    // Update animation
+    updateAnimationFromSimulation(currentSimulation, nodes);
+    
+    // Update display
+    updateStatusDisplay();
+    draw();
+    
+    // Check if complete
+    if (currentSimulation.isComplete) {
+        showFinalResult();
+        stopAutoPlay();
+    }
+}
+
+// Handle play/pause toggle
+function handlePlayPause() {
+    if (!currentSimulation) {
+        return;
+    }
+    
+    if (currentSimulation.isPlaying) {
+        stopAutoPlay();
+    } else {
+        startAutoPlay();
+    }
+}
+
+// Start auto-play mode
+function startAutoPlay() {
+    if (!currentSimulation || currentSimulation.isComplete) {
+        return;
+    }
+    
+    currentSimulation.isPlaying = true;
+    updatePlayPauseButton(true);
+    
+    // Start interval
+    simulationInterval = setInterval(function() {
+        handleStepSimulation();
+        
+        if (currentSimulation.isComplete) {
+            stopAutoPlay();
+        }
+    }, currentSimulation.speed);
+}
+
+// Stop auto-play mode
+function stopAutoPlay() {
+    if (simulationInterval) {
+        clearInterval(simulationInterval);
+        simulationInterval = null;
+    }
+    
+    if (currentSimulation) {
+        currentSimulation.isPlaying = false;
+    }
+    
+    updatePlayPauseButton(false);
+}
+
+// Handle reset button click
+function handleResetSimulation() {
+    stopAutoPlay();
+    currentSimulation = null;
+    clearAnimationState();
+    updateControlStates(false, false);
+    updateStatusDisplay();
+    hideResultDisplay();
+    draw();
+}
+
+// Update simulation speed from slider
+function updateSimulationSpeed(value) {
+    // Invert the value so higher slider = faster (lower ms)
+    var speed = 2100 - parseInt(value); // Range: 100-2000ms
+    
+    // Update label
+    var label = document.getElementById('simSpeedLabel');
+    if (label) {
+        label.textContent = (speed / 1000).toFixed(1) + 's';
+    }
+    
+    // Update simulation state
+    if (currentSimulation) {
+        currentSimulation.speed = speed;
+        
+        // If playing, restart interval with new speed
+        if (currentSimulation.isPlaying) {
+            stopAutoPlay();
+            startAutoPlay();
+        }
+    }
+}
+
+// Update button states based on simulation state
+function updateControlStates(started, playing) {
+    var stepBtn = document.getElementById('simStep');
+    var playPauseBtn = document.getElementById('simPlayPause');
+    var resetBtn = document.getElementById('simReset');
+    var startBtn = document.getElementById('simStart');
+    var inputField = document.getElementById('simInput');
+    
+    if (started) {
+        if (stepBtn) stepBtn.disabled = false;
+        if (playPauseBtn) playPauseBtn.disabled = false;
+        if (resetBtn) resetBtn.disabled = false;
+        if (startBtn) startBtn.disabled = true;
+        if (inputField) inputField.disabled = true;
+    } else {
+        if (stepBtn) stepBtn.disabled = true;
+        if (playPauseBtn) playPauseBtn.disabled = true;
+        if (resetBtn) resetBtn.disabled = true;
+        if (startBtn) startBtn.disabled = false;
+        if (inputField) inputField.disabled = false;
+    }
+}
+
+// Update play/pause button text
+function updatePlayPauseButton(isPlaying) {
+    var btn = document.getElementById('simPlayPause');
+    if (btn) {
+        btn.textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+    }
+}
+
+// Update status display with current simulation info
+function updateStatusDisplay() {
+    var charDisplay = document.getElementById('simCurrentChar');
+    var stateDisplay = document.getElementById('simCurrentState');
+    var progressDisplay = document.getElementById('simProgress');
+    var pathsDisplay = document.getElementById('simPaths');
+    
+    if (!currentSimulation) {
+        if (charDisplay) charDisplay.textContent = 'Current: -';
+        if (stateDisplay) stateDisplay.textContent = 'State: -';
+        if (progressDisplay) progressDisplay.textContent = 'Position: 0/0';
+        if (pathsDisplay) pathsDisplay.textContent = '';
+        return;
+    }
+    
+    var info = getSimulationInfo(currentSimulation, nodes);
+    
+    if (charDisplay) {
+        if (info.currentChar !== null) {
+            charDisplay.textContent = "Current: '" + info.currentChar + "'";
+        } else {
+            charDisplay.textContent = 'Current: (end)';
+        }
+    }
+    
+    if (stateDisplay) {
+        var stateNames = info.currentStateNames.join(', ');
+        stateDisplay.textContent = 'State: ' + (stateNames || '-');
+    }
+    
+    if (progressDisplay) {
+        progressDisplay.textContent = 'Position: ' + info.position + '/' + info.totalLength;
+    }
+    
+    if (pathsDisplay) {
+        if (info.activePaths > 1) {
+            pathsDisplay.textContent = 'Exploring ' + info.activePaths + ' paths (NFA)';
+            pathsDisplay.style.display = 'inline';
+        } else {
+            pathsDisplay.style.display = 'none';
+        }
+    }
+}
+
+// Show final result
+function showFinalResult() {
+    var resultDiv = document.getElementById('simResult');
+    if (!resultDiv || !currentSimulation) {
+        return;
+    }
+    
+    var result = getFinalResult(currentSimulation);
+    
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'sim-result';
+    
+    switch (result.result) {
+        case 'accepted':
+            resultDiv.textContent = '✓ ACCEPTED';
+            resultDiv.classList.add('accepted');
+            break;
+        case 'rejected':
+            resultDiv.textContent = '✗ REJECTED';
+            resultDiv.classList.add('rejected');
+            break;
+        case 'stuck':
+            resultDiv.textContent = '✗ STUCK';
+            resultDiv.classList.add('rejected');
+            if (result.errorMessage) {
+                resultDiv.textContent += ' - ' + result.errorMessage;
+            }
+            break;
+    }
+    
+    // Disable step and play buttons
+    var stepBtn = document.getElementById('simStep');
+    var playPauseBtn = document.getElementById('simPlayPause');
+    if (stepBtn) stepBtn.disabled = true;
+    if (playPauseBtn) playPauseBtn.disabled = true;
+}
+
+// Hide result display
+function hideResultDisplay() {
+    var resultDiv = document.getElementById('simResult');
+    if (resultDiv) {
+        resultDiv.style.display = 'none';
+        resultDiv.className = 'sim-result';
+        resultDiv.textContent = '';
+    }
+}
+
+// Show error message
+function showSimulationError(message) {
+    var resultDiv = document.getElementById('simResult');
+    if (resultDiv) {
+        resultDiv.style.display = 'block';
+        resultDiv.className = 'sim-result sim-error';
+        resultDiv.textContent = '⚠ ' + message;
+    }
+}
+
+// Initialize when document loads
+if (typeof window !== 'undefined') {
+    var oldOnload = window.onload;
+    window.onload = function() {
+        if (oldOnload) oldOnload();
+        initSimulationUI();
+    };
 }

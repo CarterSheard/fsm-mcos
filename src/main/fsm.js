@@ -109,20 +109,48 @@ function drawUsing(c) {
 	c.save();
 	c.translate(0.5, 0.5);
 
+	// Draw simulation overlay (input string display) first
+	if (simulationActive && currentSimulation && typeof drawSimulationOverlay === 'function') {
+		drawSimulationOverlay(c);
+	}
+
 	for(var i = 0; i < nodes.length; i++) {
 		c.lineWidth = 1;
 		c.fillStyle = c.strokeStyle = (nodes[i] == selectedObject) ? 'blue' : 'black';
-		nodes[i].draw(c);
+		
+		// Check for simulation highlight
+		var simHighlighted = false;
+		if (simulationActive && currentSimulation && typeof drawNodeWithSimulation === 'function') {
+			simHighlighted = drawNodeWithSimulation(c, nodes[i], i, nodes[i] == selectedObject);
+		}
+		
+		if (!simHighlighted) {
+			nodes[i].draw(c);
+		}
 	}
 	for(var i = 0; i < links.length; i++) {
 		c.lineWidth = 1;
 		c.fillStyle = c.strokeStyle = (links[i] == selectedObject) ? 'blue' : 'black';
-		links[i].draw(c);
+		
+		// Check for simulation highlight
+		var simHighlighted = false;
+		if (simulationActive && currentSimulation && typeof drawLinkWithSimulation === 'function') {
+			simHighlighted = drawLinkWithSimulation(c, links[i], links[i] == selectedObject);
+		}
+		
+		if (!simHighlighted) {
+			links[i].draw(c);
+		}
 	}
 	if(currentLink != null) {
 		c.lineWidth = 1;
 		c.fillStyle = c.strokeStyle = 'black';
 		currentLink.draw(c);
+	}
+
+	// Draw result banner if simulation is complete
+	if (simulationActive && currentSimulation && typeof drawResultBanner === 'function') {
+		drawResultBanner(c, canvas.width, canvas.height);
 	}
 
 	c.restore();

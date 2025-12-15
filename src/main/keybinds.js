@@ -323,6 +323,44 @@ function handleKeyDown(e) {
         return false;
     }
     
+    // Ctrl+R - Toggle Simulation Mode
+    if (ctrl && key == 82 && !shiftKey) {
+        e.preventDefault();
+        if (typeof toggleSimulationMode === 'function') {
+            toggleSimulationMode();
+        }
+        return false;
+    }
+    
+    // Escape - Exit simulation mode (if active)
+    if (key == 27) { // Escape key
+        if (typeof simulationActive !== 'undefined' && simulationActive) {
+            e.preventDefault();
+            if (typeof exitSimulationMode === 'function') {
+                exitSimulationMode();
+            }
+            return false;
+        }
+    }
+    
+    // Space - Step simulation (when in simulation mode)
+    if (key == 32 && typeof simulationActive !== 'undefined' && simulationActive) {
+        e.preventDefault();
+        if (typeof handleStepSimulation === 'function') {
+            handleStepSimulation();
+        }
+        return false;
+    }
+    
+    // Enter - Play/Pause simulation (when in simulation mode)
+    if (key == 13 && typeof simulationActive !== 'undefined' && simulationActive) {
+        e.preventDefault();
+        if (typeof handlePlayPause === 'function') {
+            handlePlayPause();
+        }
+        return false;
+    }
+    
     // Don't handle remaining keys if not focused on canvas
     if (!canvasHasFocus()) {
         return true;
