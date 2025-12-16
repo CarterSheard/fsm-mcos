@@ -446,6 +446,32 @@ p {
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
+/* Load DFA Button */
+#loadDFAButton {
+    position: absolute;
+    top: 160px;
+    right: -120px;
+    background-color: #4CAF50; /* Green */
+    color: white;
+    border: none;
+    padding: 12px 19px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background-color 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#loadDFAButton:hover {
+    background-color: #45a049;
+}
+
+#loadDFAButton:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
 /* === Simulation Panel Styles === */
 #simulationPanel {
     display: none;
@@ -719,6 +745,7 @@ Example:
 		<button id="deleteAllButton" onclick="clearCanvas()">Delete All</button>
 		<button id="importButton" onclick="showImportModal()">Import LaTeX</button>
 		<button id="simulateButton" onclick="toggleSimulationMode()">▶ Simulate</button>
+		<button id="loadDFAButton" onclick="loadDFA()">DFA Bonus</button>
 	</div>
 	
 	<!-- Simulation Panel -->
