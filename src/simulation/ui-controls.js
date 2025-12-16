@@ -105,6 +105,12 @@ function handleStartSimulation() {
     
     currentSimulation = result.simulation;
     
+    // Set initial speed from slider
+    var speedSlider = document.getElementById('simSpeed');
+    if (speedSlider) {
+        updateSimulationSpeed(speedSlider.value);
+    }
+    
     // Update animation state for initial position
     updateAnimationFromSimulation(currentSimulation, nodes);
     
@@ -166,14 +172,40 @@ function startAutoPlay() {
     currentSimulation.isPlaying = true;
     updatePlayPauseButton(true);
     
+    // Determine interval and steps per tick
+    // If speed is very fast (< 20ms), run multiple steps per 20ms tick
+    var intervalMs = currentSimulation.speed;
+    var stepsPerTick = 1;
+    
+    if (intervalMs < 20) {
+        stepsPerTick = Math.ceil(20 / intervalMs);
+        intervalMs = 20;
+    }
+    
     // Start interval
     simulationInterval = setInterval(function() {
-        handleStepSimulation();
+        // Execute batched steps
+        for (var i = 0; i < stepsPerTick; i++) {
+            if (currentSimulation.isComplete) {
+                break;
+            }
+            
+            // Execute one step without drawing yet
+            stepSimulation(currentSimulation, nodes);
+            
+            // Update animation state
+            updateAnimationFromSimulation(currentSimulation, nodes);
+        }
+        
+        // Update display and draw once per tick
+        updateStatusDisplay();
+        draw();
         
         if (currentSimulation.isComplete) {
+            showFinalResult();
             stopAutoPlay();
         }
-    }, currentSimulation.speed);
+    }, intervalMs);
 }
 
 // Stop auto-play mode
@@ -203,13 +235,24 @@ function handleResetSimulation() {
 
 // Update simulation speed from slider
 function updateSimulationSpeed(value) {
-    // Invert the value so higher slider = faster (lower ms)
-    var speed = 2100 - parseInt(value); // Range: 100-2000ms
+    // Logarithmic scale: 0 -> 2000ms (slow), 100 -> 5ms (fast)
+    // Formula: speed = A * exp(B * value)
+    // A = 2000
+    // B = ln(5/2000) / 100 = ln(0.0025) / 100
+    var minSpeed = 5;
+    var maxSpeed = 2000;
+    var sliderMax = 100;
+    
+    var speed = maxSpeed * Math.exp((Math.log(minSpeed / maxSpeed) / sliderMax) * value);
     
     // Update label
     var label = document.getElementById('simSpeedLabel');
     if (label) {
-        label.textContent = (speed / 1000).toFixed(1) + 's';
+        if (speed >= 100) {
+            label.textContent = (speed / 1000).toFixed(1) + 's';
+        } else {
+            label.textContent = Math.round(speed) + 'ms';
+        }
     }
     
     // Update simulation state

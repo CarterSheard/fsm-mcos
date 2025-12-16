@@ -472,6 +472,32 @@ p {
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
+/* Load MST Button */
+#loadMSTButton {
+    position: absolute;
+    top: 210px;
+    right: -120px;
+    background-color: #006400; /* Dark Green */
+    color: white;
+    border: none;
+    padding: 12px 12.3px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background-color 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#loadMSTButton:hover {
+    background-color: #004d00;
+}
+
+#loadMSTButton:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
 /* === Simulation Panel Styles === */
 #simulationPanel {
     display: none;
@@ -791,6 +817,7 @@ Example:
 		<button id="importButton" onclick="showImportModal()">Import LaTeX</button>
 		<button id="simulateButton" onclick="toggleSimulationMode()">▶ Simulate</button>
 		<button id="loadDFAButton" onclick="loadDFA()">DFA Bonus</button>
+		<button id="loadMSTButton" onclick="loadMSTExample()">MST Example</button>
 	</div>
 	
 	<!-- Simulation Panel -->
@@ -804,8 +831,8 @@ Example:
 		</div>
 		<div class="sim-speed">
 			<label>Speed:</label>
-			<input type="range" id="simSpeed" min="100" max="2000" value="1600">
-			<span id="simSpeedLabel">0.5s</span>
+			<input type="range" id="simSpeed" min="0" max="100" value="50">
+			<span id="simSpeedLabel">0.1s</span>
 		</div>
 		<div class="sim-status">
 			<span id="simCurrentChar">Current: -</span>
