@@ -47,3 +47,7 @@ Node.prototype.closestPointOnCircle = function(x, y) {
 Node.prototype.containsPoint = function(x, y) {
 	return (x - this.x)*(x - this.x) + (y - this.y)*(y - this.y) < nodeRadius*nodeRadius;
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+	module.exports = Node;
+}

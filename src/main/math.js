@@ -17,3 +17,11 @@ function circleFromThreePoints(x1, y1, x2, y2, x3, y3) {
 function fixed(number, digits) {
 	return number.toFixed(digits).replace(/0+$/, '').replace(/\.$/, '');
 }
+
+if (typeof module !== 'undefined' && module.exports) {
+	module.exports = {
+		det: det,
+		circleFromThreePoints: circleFromThreePoints,
+		fixed: fixed
+	};
+}

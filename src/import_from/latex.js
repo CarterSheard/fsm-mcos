@@ -557,3 +557,10 @@ function clearCanvas() {
 		}
 	}
 }
+
+if (typeof module !== 'undefined' && module.exports) {
+	module.exports = {
+		ImportFromLaTeX: ImportFromLaTeX,
+		importFromLaTeX: importFromLaTeX
+	};
+}
