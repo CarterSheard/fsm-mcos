@@ -1557,7 +1557,10 @@ ImportFromLaTeX.prototype._getLinkMidpoint = function(link, nodeRadius) {
 function importFromLaTeX(latexString) {
 	var importer = new ImportFromLaTeX();
 	importer.parse(latexString);
-	return importer.reconstructFSM();
+	var result = importer.reconstructFSM();
+	// Detect if directed based on presence of fills (arrowheads)
+	result.isDirected = importer._fills.length > 0;
+	return result;
 }
 
 // UI functions for LaTeX import modal
@@ -1598,6 +1601,15 @@ function importLaTeX() {
 		// Populate with imported data
 		nodes = result.nodes;
 		links = result.links;
+
+		// Update directed state
+		if (typeof directed !== 'undefined') {
+			directed = result.isDirected;
+			var checkbox = document.getElementById('directedLinksCheckbox');
+			if (checkbox) {
+				checkbox.checked = directed;
+			}
+		}
 		
 		// Redraw and save
 		draw();
