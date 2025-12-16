@@ -657,6 +657,51 @@ p {
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
+/* Algorithm Buttons */
+.algo-btn {
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 6px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: background-color 0.2s ease-in-out, transform 0.1s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.algo-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.btn-list {
+    background-color: #FFC107; /* Yellow */
+    color: black;
+}
+.btn-list:hover {
+    background-color: #FFA000;
+}
+
+.btn-matrix {
+    background-color: #FF9800; /* Orange */
+    color: white;
+}
+.btn-matrix:hover {
+    background-color: #F57C00;
+}
+
+.btn-mst {
+    background-color: #1565C0; /* Dark Blue */
+    color: white;
+}
+.btn-mst:hover {
+    background-color: #0D47A1;
+}
+
   </style>
 	<script src="fsm.js"></script>
 	<script>
@@ -773,9 +818,9 @@ Example:
 	
 	<div>
 		<p class="center" id="algorithmLinks" style="display: none;">
-			<a href="javascript:exportAdjacencyMatrix()" style="color: #4CAF50; font-weight: bold;">Adjacency Matrix</a> |
-			<a href="javascript:exportAdjacencyList()" style="color: #4CAF50; font-weight: bold;">Adjacency List</a> |
-			<a href="javascript:applyMST()" style="color: #4CAF50; font-weight: bold;">Compute MST</a>
+			<button onclick="exportAdjacencyList()" class="algo-btn btn-list">List</button>
+			<button onclick="exportAdjacencyMatrix()" class="algo-btn btn-matrix">Matrix</button>
+			<button onclick="applyMST()" class="algo-btn btn-mst">MST</button>
 		</p>
 		<div class="export-options">
 			<p class="center">Export as: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
