@@ -304,9 +304,43 @@ ImportFromLaTeX.prototype.reconstructFSM = function() {
 		var arcEndNode = this._findNearestNode(nodePositions, endPos.x, endPos.y, nodeRadius + 15);
 		
 		if (arcStartNode && arcEndNode && arcStartNode !== arcEndNode) {
-			// Create link from arcStartNode to arcEndNode
-			// The LaTeX arc's start point is near nodeA, end point is near nodeB
-			var link = new Link(arcStartNode.node, arcEndNode.node);
+			// Find the fill (arrow) associated with this arc to determine direction
+			// The fill's first point should be at the arrow tip (arc end)
+			var nearestFill = null;
+			var nearestFillDist = Infinity;
+			
+			for (var j = 0; j < this._fills.length; j++) {
+				if (this._fills[j]._assigned) continue;
+				var fillFirstPoint = this._transformCoord(this._fills[j].points[0].x, this._fills[j].points[0].y);
+				
+				// Check distance to arc end position
+				var distToEnd = Math.sqrt(Math.pow(fillFirstPoint.x - endPos.x, 2) + Math.pow(fillFirstPoint.y - endPos.y, 2));
+				var distToStart = Math.sqrt(Math.pow(fillFirstPoint.x - startPos.x, 2) + Math.pow(fillFirstPoint.y - startPos.y, 2));
+				
+				// The fill should be closer to one end of the arc
+				if (distToEnd < 20 || distToStart < 20) {
+					var minDist = Math.min(distToEnd, distToStart);
+					if (minDist < nearestFillDist) {
+						nearestFillDist = minDist;
+						nearestFill = { fill: this._fills[j], atStart: distToStart < distToEnd };
+					}
+				}
+			}
+			
+			// Determine correct node order based on where the arrow is
+			var nodeA, nodeB;
+			if (nearestFill && nearestFill.atStart) {
+				// Arrow is at start of arc, so arc goes from end to start
+				nodeA = arcEndNode.node;
+				nodeB = arcStartNode.node;
+			} else {
+				// Arrow is at end of arc (normal case), or no fill found
+				nodeA = arcStartNode.node;
+				nodeB = arcEndNode.node;
+			}
+			
+			// Create link from nodeA to nodeB
+			var link = new Link(nodeA, nodeB);
 			link.text = '';
 			link.lineAngleAdjust = 0;
 			
@@ -318,20 +352,25 @@ ImportFromLaTeX.prototype.reconstructFSM = function() {
 			var arcMidPos = this._transformCoord(arcMidX, arcMidY);
 			
 			// Calculate perpendicular distance from the line to the arc midpoint
-			var dx = arcEndNode.x - arcStartNode.x;  // nodeB - nodeA
-			var dy = arcEndNode.y - arcStartNode.y;
+			var dx = nodeB.x - nodeA.x;  // nodeB - nodeA
+			var dy = nodeB.y - nodeA.y;
 			var length = Math.sqrt(dx * dx + dy * dy);
 			
 			if (length > 0) {
 				link.parallelPart = 0.5;
 				// Perpendicular part uses the arc midpoint (which lies on the arc)
 				// as the anchor point reference
-				link.perpendicularPart = (dx * (arcMidPos.y - arcStartNode.y) - dy * (arcMidPos.x - arcStartNode.x)) / length;
+				link.perpendicularPart = (dx * (arcMidPos.y - nodeA.y) - dy * (arcMidPos.x - nodeA.x)) / length;
 			}
 			
 			result.links.push(link);
 			arc._assigned = true;
 			arc._linkIndex = result.links.length - 1;
+			
+			// Mark the fill as assigned
+			if (nearestFill) {
+				nearestFill.fill._assigned = true;
+			}
 		}
 	}
 	
@@ -410,10 +449,37 @@ ImportFromLaTeX.prototype._getLinkMidpoint = function(link, nodeRadius) {
 			y: link.node.y + link.deltaY
 		};
 	} else if (link instanceof Link) {
-		return {
-			x: (link.nodeA.x + link.nodeB.x) / 2,
-			y: (link.nodeA.y + link.nodeB.y) / 2
-		};
+		// If it's a curved link (has perpendicular part), calculate arc midpoint
+		if (link.perpendicularPart !== 0) {
+			var anchor = link.getAnchorPoint();
+			var circle = circleFromThreePoints(link.nodeA.x, link.nodeA.y, link.nodeB.x, link.nodeB.y, anchor.x, anchor.y);
+			var isReversed = (link.perpendicularPart > 0);
+			var reverseScale = isReversed ? 1 : -1;
+			var startAngle = Math.atan2(link.nodeA.y - circle.y, link.nodeA.x - circle.x) - reverseScale * nodeRadius / circle.radius;
+			var endAngle = Math.atan2(link.nodeB.y - circle.y, link.nodeB.x - circle.x) + reverseScale * nodeRadius / circle.radius;
+			
+			if (isReversed) {
+				var temp = startAngle;
+				startAngle = endAngle;
+				endAngle = temp;
+			}
+			
+			if (endAngle < startAngle) {
+				endAngle += Math.PI * 2;
+			}
+			
+			var midAngle = (startAngle + endAngle) / 2;
+			return {
+				x: circle.x + circle.radius * Math.cos(midAngle),
+				y: circle.y + circle.radius * Math.sin(midAngle)
+			};
+		} else {
+			// Straight line midpoint
+			return {
+				x: (link.nodeA.x + link.nodeB.x) / 2,
+				y: (link.nodeA.y + link.nodeB.y) / 2
+			};
+		}
 	}
 	return null;
 };
