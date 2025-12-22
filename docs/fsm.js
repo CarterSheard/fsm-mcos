@@ -2181,7 +2181,8 @@ var keyStates = {
     ctrlPressed: false,
     mPressed: false,
     lPressed: false,
-    bPressed: false
+    bPressed: false,
+    comboTriggered: false
 };
 
 // Track typed characters for "test" keybind
@@ -2224,20 +2225,28 @@ function toggleLeftButtons() {
     }
 }
 
-// Check if Ctrl+M+L+B combination is active
+// Check if M+L+B combination is active
 function checkLinkVisibilityCombo() {
     if (keyStates.mPressed &&
         keyStates.lPressed && keyStates.bPressed) {
-        revealAlgorithmLinks();
+        if (!keyStates.comboTriggered) {
+            toggleAlgorithmLinks();
+            keyStates.comboTriggered = true;
+        }
     }
 }
 
-// Reveal the algorithm links permanently
-function revealAlgorithmLinks() {
+// Toggle visibility of algorithm links
+function toggleAlgorithmLinks() {
     var linksElement = document.getElementById('algorithmLinks');
-    if (linksElement && linksElement.style.display === 'none') {
-        linksElement.style.display = 'block';
-        console.log('Algorithm links revealed!');
+    if (linksElement) {
+        if (linksElement.style.display === 'none') {
+            linksElement.style.display = 'block';
+            console.log('Algorithm links revealed!');
+        } else {
+            linksElement.style.display = 'none';
+            console.log('Algorithm links hidden!');
+        }
     }
 }
 
@@ -2679,9 +2688,9 @@ function initKeybinds() {
         
         // Reset key states on release
         keyStates.ctrlPressed = e.ctrlKey || e.metaKey;
-        if (key == 77) keyStates.mPressed = false;  // M
-        if (key == 76) keyStates.lPressed = false;  // L
-        if (key == 66) keyStates.bPressed = false;  // B
+        if (key == 77) { keyStates.mPressed = false; keyStates.comboTriggered = false; } // M
+        if (key == 76) { keyStates.lPressed = false; keyStates.comboTriggered = false; } // L
+        if (key == 66) { keyStates.bPressed = false; keyStates.comboTriggered = false; } // B
     };
 }
 function det(a, b, c, d, e, f, g, h, i) {
