@@ -2184,6 +2184,46 @@ var keyStates = {
     bPressed: false
 };
 
+// Track typed characters for "test" keybind
+var typedBuffer = '';
+var typedBufferTimeout = null;
+
+// Check if "test" was typed to toggle left buttons
+function checkTestKeybind(char) {
+    // Clear timeout if exists
+    if (typedBufferTimeout) {
+        clearTimeout(typedBufferTimeout);
+    }
+    
+    // Add character to buffer
+    typedBuffer += char.toLowerCase();
+    
+    // Keep only last 4 characters
+    if (typedBuffer.length > 4) {
+        typedBuffer = typedBuffer.slice(-4);
+    }
+    
+    // Check if "test" was typed
+    if (typedBuffer === 'test') {
+        toggleLeftButtons();
+        typedBuffer = '';
+    }
+    
+    // Clear buffer after 2 seconds of no typing
+    typedBufferTimeout = setTimeout(function() {
+        typedBuffer = '';
+    }, 2000);
+}
+
+// Toggle visibility of left side buttons
+function toggleLeftButtons() {
+    var container = document.getElementById('leftButtonsContainer');
+    if (container) {
+        container.classList.toggle('visible');
+        console.log('Left buttons toggled!');
+    }
+}
+
 // Check if Ctrl+M+L+B combination is active
 function checkLinkVisibilityCombo() {
     if (keyStates.mPressed &&
@@ -2591,6 +2631,11 @@ function isTyping() {
 // Enhanced keypress handler for text input
 function handleKeyPress(e) {
     var key = e.keyCode || e.which;
+    
+    // Check for "test" keybind globally (works anywhere on the page)
+    if (key >= 0x20 && key <= 0x7E && !e.metaKey && !e.altKey && !e.ctrlKey) {
+        checkTestKeybind(String.fromCharCode(key));
+    }
     
     if (!canvasHasFocus()) {
         return true;

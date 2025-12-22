@@ -446,11 +446,48 @@ p {
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-/* Load DFA Button */
-#loadDFAButton {
+/* Left Side Test Buttons Container */
+#leftButtonsContainer {
     position: absolute;
-    top: 160px;
-    right: -120px;
+    top: 10px;
+    left: -140px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#leftButtonsContainer.visible {
+    display: flex;
+}
+
+/* Practice Test Button */
+#practiceTestButton {
+    background-color: #AFEEEE; /* Blue */
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background-color 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    text-decoration: none;
+    display: block;
+    text-align: center;
+}
+
+#practiceTestButton:hover {
+    background-color: #7B1FA2;
+}
+
+#practiceTestButton:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* DFA Bonus Button (Left side) */
+#dfaBonusButton {
     background-color: #4CAF50; /* Green */
     color: white;
     border: none;
@@ -463,20 +500,17 @@ p {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-#loadDFAButton:hover {
+#dfaBonusButton:hover {
     background-color: #45a049;
 }
 
-#loadDFAButton:active {
+#dfaBonusButton:active {
     transform: translateY(1px);
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-/* Load MST Button */
-#loadMSTButton {
-    position: absolute;
-    top: 210px;
-    right: -120px;
+/* MST Example Button (Left side) */
+#mstExampleButton {
     background-color: #006400; /* Dark Green */
     color: white;
     border: none;
@@ -489,11 +523,11 @@ p {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-#loadMSTButton:hover {
+#mstExampleButton:hover {
     background-color: #004d00;
 }
 
-#loadMSTButton:active {
+#mstExampleButton:active {
     transform: translateY(1px);
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
@@ -665,7 +699,7 @@ p {
     background-color: #9C27B0;
     color: white;
     border: none;
-    padding: 12px 16px;
+    padding: 12px 10.25px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 13px;
@@ -813,11 +847,16 @@ Example:
 		<canvas id="canvas" width="800" height="600">
 			<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
 		</canvas>
+		<!-- Right side buttons -->
 		<button id="deleteAllButton" onclick="clearCanvas()">Delete All</button>
 		<button id="importButton" onclick="showImportModal()">Import LaTeX</button>
-		<button id="simulateButton" onclick="toggleSimulationMode()">▶ Simulate</button>
-		<button id="loadDFAButton" onclick="loadDFA()">DFA Bonus</button>
-		<button id="loadMSTButton" onclick="loadMSTExample()">MST Example</button>
+		<button id="simulateButton" onclick="toggleSimulationMode()">Simulate DFA</button>
+		<!-- Left side buttons (hidden by default, revealed by typing "test") -->
+		<div id="leftButtonsContainer">
+			<a id="practiceTestButton" href="https://www.overleaf.com/read/zygrsxrmrwwk#7b1c07" target="_blank">Practice Test</a>
+			<button id="dfaBonusButton" onclick="loadDFA()">DFA Bonus</button>
+			<button id="mstExampleButton" onclick="loadMSTExample()">MST Example</button>
+		</div>
 	</div>
 	
 	<!-- Simulation Panel -->
