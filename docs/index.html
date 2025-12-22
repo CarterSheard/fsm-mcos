@@ -394,11 +394,18 @@ p {
     text-decoration: underline;
 }
 
-/* Delete All Button */
-#deleteAllButton {
+/* Right Side Buttons Container */
+#rightButtonsContainer {
     position: absolute;
     top: 10px;
     right: -120px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Delete All Button */
+#deleteAllButton {
     background-color: #dc3545;
     color: white;
     border: none;
@@ -422,9 +429,6 @@ p {
 
 /* Import Button */
 #importButton {
-    position: absolute;
-    top: 60px;
-    right: -120px;
     background-color: #2196F3;
     color: white;
     border: none;
@@ -478,7 +482,7 @@ p {
 }
 
 #practiceTestButton:hover {
-    background-color: #7B1FA2;
+    background-color: #3ab8ee;
 }
 
 #practiceTestButton:active {
@@ -488,7 +492,7 @@ p {
 
 /* DFA Bonus Button (Left side) */
 #dfaBonusButton {
-    background-color: #4CAF50; /* Green */
+    background-color: #A0D6B4; /* Pastel Green */
     color: white;
     border: none;
     padding: 12px 19px;
@@ -501,7 +505,7 @@ p {
 }
 
 #dfaBonusButton:hover {
-    background-color: #45a049;
+    background-color: #8eef93;
 }
 
 #dfaBonusButton:active {
@@ -511,7 +515,7 @@ p {
 
 /* MST Example Button (Left side) */
 #mstExampleButton {
-    background-color: #006400; /* Dark Green */
+    background-color: #73A986; /* Muted Sage */
     color: white;
     border: none;
     padding: 12px 12.3px;
@@ -524,7 +528,7 @@ p {
 }
 
 #mstExampleButton:hover {
-    background-color: #004d00;
+    background-color: #5c936f;
 }
 
 #mstExampleButton:active {
@@ -693,9 +697,6 @@ p {
 
 /* Simulate Button */
 #simulateButton {
-    position: absolute;
-    top: 110px;
-    right: -120px;
     background-color: #9C27B0;
     color: white;
     border: none;
@@ -848,9 +849,11 @@ Example:
 			<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
 		</canvas>
 		<!-- Right side buttons -->
-		<button id="deleteAllButton" onclick="clearCanvas()">Delete All</button>
-		<button id="importButton" onclick="showImportModal()">Import LaTeX</button>
-		<button id="simulateButton" onclick="toggleSimulationMode()">Simulate DFA</button>
+		<div id="rightButtonsContainer">
+			<button id="deleteAllButton" onclick="clearCanvas()">Delete All</button>
+			<button id="importButton" onclick="showImportModal()">Import LaTeX</button>
+			<button id="simulateButton" onclick="toggleSimulationMode()">Simulate DFA</button>
+		</div>
 		<!-- Left side buttons (hidden by default, revealed by typing "test") -->
 		<div id="leftButtonsContainer">
 			<a id="practiceTestButton" href="https://www.overleaf.com/read/zygrsxrmrwwk#7b1c07" target="_blank">Practice Test</a>
